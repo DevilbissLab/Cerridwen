@@ -1,0 +1,29 @@
+NexStep Biomarkers Spectral Data,v.0.89,
+Analysis Date,Fri March 02 2012  6:24:52 PM,
+,,
+Group,,
+Project,,
+Study ID,,
+Dose,,
+Recording Date,,
+Subject ID,X M X X Age 25,
+Channel,  1.00000000,EEG Fpz-Cz
+,,
+Path/File Name,Y:\UserData\NexStepBiomarkers\NSB_AnalyticFramework\PreClinicalEEGFramework\Validation\sc4102e0.edf,
+Start Time,18-Apr-1989 15:56:00,
+Sampling Rate,100.00000000,
+Epoch Length, 10.00000000,
+Unit Measurement,uV,
+,,
+Band Frequencies,Start,Stop
+Band 1,  0.50000000,  4.00000000
+Band 2,  5.00000000,  8.00000000
+Band 3,  9.00000000, 12.00000000
+Band 4, 15.00000000, 30.00000000
+Band 5, 31.00000000, 40.00000000
+Band Ratios,Numerator,Denominator
+Ratio 1,,
+Ratio 2,,
+Ratio 3,,
+Ratio 4,,
+Ratio 5,,
