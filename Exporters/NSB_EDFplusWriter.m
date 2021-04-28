@@ -22,6 +22,7 @@ function [status, errorstr] = NSB_EDFplusWriter(DataStruct, filename, options)
 %Check indexing on file write so you are not resamppling the last point... 
 %swap NSB_strcat with []because NSB_strcat r?emoves white space
 
+
 % Labels in EDF+ contain 'XXX name' wher XXX is a LabelType and name is the
 % name of the channel
 LabelTypes = {'EEG','ECG','EOG','ERG','EMG','MEG','MCG','EP'};
@@ -37,6 +38,20 @@ end
 [fnPath,fn,fnExt] = fileparts(filename);
 if exist(fnPath,'dir') ~= 7
     mkdir(fnPath);
+end
+
+%Address 1985 pivot date (now enforced as min date in EDF Browser)
+if isfield(DataStruct,'StartDate')
+    if DataStruct.StartDate == 0;
+        DataStruct.StartDate = 725008; % Force '00-01-1985'
+    elseif DataStruct.StartDate < 725008
+        errorstr = 'Warning: NSB_EDFreader >> Reported file startdate is before 1985. This will be flagged in EDF readers as an incompatability';
+        if ~isempty(options.logfile)
+            status = NSBlog(options.logfile,errorstr);
+        else
+            errordlg(errorstr,'NSB_EDFreader');
+        end
+    end
 end
 
 % Determine whether file is EDF or EDF+
@@ -239,43 +254,44 @@ nElements = fwrite(fid, element, 'char'); %write element
 % - The hospital administration code of the investigation, i.e. EEG number or PSG number. 
 % - A code specifying the responsible investigator or technician. 
 % - A code specifying the used equipment.
+%- Note the minimum startdate is 01.01.1985 00:00:00
 if ~isempty(strfind(DataStruct.FileFormat,'.edf'))
     %original file was EDF(+)
     %element = DataStruct.Comment;
     if strcmpi(DataStruct.Comment(1:9),'Startdate')
-    element = regexprep(DataStruct.Comment,'[\.\s]','-');
+        element = regexprep(DataStruct.Comment,'[\.\s]','-');
     else
-    element = 'Startdate';
-    if isfield(DataStruct,'StartDate')
-        element = NSB_strcat(element,' ',upper(datestr(DataStruct.StartDate,'dd-mmm-yyyy')));
-    else
-        element = NSB_strcat(element,' X');
-    end
-    % hospital administration code Investigation
-    if isfield(DataStruct,'Study')
-        element = NSB_strcat(element,' ',DataStruct.Study);
-    else
-        element = NSB_strcat(element,' X');
-    end
-
-    %responsible investigator or technician
-    if isfield(DataStruct,'Technician')
-        element = NSB_strcat(element,' ',DataStruct.Technician);
-    else
-        element = NSB_strcat(element,' X');
-    end
+        element = 'Startdate';
+        if isfield(DataStruct,'StartDate')
+            element = NSB_strcat(element,' ',upper(datestr(DataStruct.StartDate,'dd-mmm-yyyy')));
+        else
+            element = NSB_strcat(element,' X');
+        end
+        % hospital administration code Investigation
+        if isfield(DataStruct,'Study')
+            element = NSB_strcat(element,' ',DataStruct.Study);
+        else
+            element = NSB_strcat(element,' X');
+        end
+        
+        %responsible investigator or technician
+        if isfield(DataStruct,'Technician')
+            element = NSB_strcat(element,' ',DataStruct.Technician);
+        else
+            element = NSB_strcat(element,' X');
+        end
         %used equipment
-    if isfield(DataStruct,'Comment')
-        element = NSB_strcat(element,' ',regexprep(strtrim(DataStruct.Comment),'[\.\s]','-'));
-    else
-        element = NSB_strcat(element,' X');
-    end
-    %Additional subfields may follow the ones described here. 
-    if isfield(DataStruct,'VersionName') %DSI version if Specified
-        element = NSB_strcat(element,' ',DataStruct.VersionName);
-    else
-        element = NSB_strcat(element,' X');
-    end
+        if isfield(DataStruct,'Comment')
+            element = NSB_strcat(element,' ',regexprep(strtrim(DataStruct.Comment),'[\.\s]','-'));
+        else
+            element = NSB_strcat(element,' X');
+        end
+        %Additional subfields may follow the ones described here.
+        if isfield(DataStruct,'VersionName') %DSI version if Specified
+            element = NSB_strcat(element,' ',DataStruct.VersionName);
+        else
+            element = NSB_strcat(element,' X');
+        end
     end
 else
     %Startdate
@@ -291,7 +307,7 @@ else
     else
         element = NSB_strcat(element,' X');
     end
-
+    
     %responsible investigator or technician
     if isfield(DataStruct,'Technician')
         element = NSB_strcat(element,' ',DataStruct.Technician);
@@ -304,7 +320,7 @@ else
     else
         element = NSB_strcat(element,' X');
     end
-    %Additional subfields may follow the ones described here. 
+    %Additional subfields may follow the ones described here.
     if isfield(DataStruct,'VersionName') %DSI version if Specified
         element = NSB_strcat(element,' ',DataStruct.VersionName);
     else

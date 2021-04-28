@@ -231,7 +231,7 @@ if isempty(DataStruct.SubjectID)
     else
         disp(infostr);
     end
-    if contains(DataStruct.SubjectID,'_')
+elseif contains(DataStruct.SubjectID,'_')
         DataStruct.SubjectID = regexprep(DataStruct.SubjectID,'_','-'); %Replace all Underscores with hyphens
         infostr = ['Warning: NSB_DataImportModule >> SubjectID contains "_" and will be replaced with hyphens: ',DataStruct.SubjectID];
         if ~isempty(options.logfile)
@@ -239,7 +239,6 @@ if isempty(DataStruct.SubjectID)
         else
             disp(infostr);
         end
-    end
 end
 if isempty(DataStruct.Channel(end).Name)
     infostr = ['Warning: NSB_DataImportModule >> File does not contain Channel Names. User will not be able to create statistial table from Study Design.'];
