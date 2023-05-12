@@ -350,15 +350,17 @@ switch upper(ScoringType)
         % [S,F,T,P] = spectrogram(EEG,options.Scoring.FFTEpoch*options.File.SampleHz,0,2*options.File.SampleHz,options.File.SampleHz); %5 sec win/0 sec overlap/0.5 Hz increments/1000Hz SampleRate can send NaN
         DeltaPower = sum(NormSpectralMatrix(2:9,:)); %Delta NormSpectralMatrixower 0.5 - 4 << this is hard coded
         
-        %zero out NaN's for filtering
-        numSamplesInFilterWin
+        %zero out or use average to replace NaN's for filtering
+        %Create Indexes of thresholded power
+        DeltaPower(~validBins) = mean(DeltaPower(validBins));
         
-        %Design multirate box filter
+        
+        %Design multirate box filter and smooth
         %2000 Hz 20 data points = resolution of 100 Hz or 0.01 Sec
         %numSamplesInFilterWin = ceil(options.Scoring.StageEpoch / options.Scoring.FFTEpoch);
         b = ones(1,numSamplesInFilterWin)./numSamplesInFilterWin;
         a = 1;
-        DeltaPower = filtfilt(b,a,DeltaPower);
+        DeltaPower = filtfilt(b,a,DeltaPower); %eFiltFilt cannot handle NaN or inf. 
         
         
         % run scoring

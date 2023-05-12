@@ -68,6 +68,7 @@ function parms = NSB_ParameterFile()
 % August 7 2017 ver 2.22 Added Debugging to XMLload, Added PGI DecisionTree signal envelope signal feature
 % April 20 2021 ver 3.00 Codebase brought into DevilbissLab at Rowan and will be further developed v2.22
 % April 27 2021 ver 3.01 Small bug fixes with figure naming and file naming
+% June 14 2022 ver 3.02 Fixed LIMS issue with file specific parameters 
 %
 %
 % NSB Data Format

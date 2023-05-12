@@ -796,8 +796,23 @@ switch upper(ArtDetStruct.algorithm)
                 clear nanSignal;
                 BuffMax = max(SigBuff);
                 clear SigBuff;
-                ArtDetStruct.full.STDMultiplier = curThresh(1)/(max(BuffMax)-min(BuffMax));
-                
+                % Deal with edge case where all signal is flat (2 values) and
+                % (max(BuffMax)-min(BuffMax)) == 0
+                if (max(BuffMax)-min(BuffMax)) ~= 0
+                    ArtDetStruct.full.STDMultiplier = curThresh(1)/(max(BuffMax)-min(BuffMax));
+                else
+                    %Throw a warning and set DCcalcualtion to DC
+                    ArtDetStruct.full.DCcalculation = 'DC';
+                    curThresh = get(handles.ArtifactThreshLine,'YData');
+                    ArtDetStruct.full.DCvalue = curThresh(1);
+                    errorstr = ['Warning: DynamicParameterGUI >> Could not calculate "scaled" artifact threshold. Using "DC" threshold'];
+                    if ~isempty(SpectAnalStruct.logfile)
+                        NSBlog(SpectAnalStruct.logfile,errorstr);
+                    else
+                        errordlg(errorstr,'DynamicParameterGUI');
+                    end
+                end
+
 %                 if Threshold < min(BuffMax)*2  %deal with sig's with no artifact
 %                     ArtDetStruct.full.STDMultiplier = get(handles.ArtifactThreshLine,'YData');
 %                 else
@@ -906,7 +921,22 @@ switch upper(ArtDetStruct.algorithm)
                 clear nanSignal;
                 BuffMax = max(SigBuff);
                 clear SigBuff;
-                ArtDetStruct.full.STDMultiplier = curThresh(1)/(max(BuffMax)-min(BuffMax));
+                % Deal with edge case where all signal is flat (2 values) and
+                % (max(BuffMax)-min(BuffMax)) == 0
+                if (max(BuffMax)-min(BuffMax)) ~= 0
+                    ArtDetStruct.full.STDMultiplier = curThresh(1)/(max(BuffMax)-min(BuffMax));
+                else
+                    %Throw a warning and set DCcalcualtion to DC
+                    ArtDetStruct.full.DCcalculation = 'DC';
+                    curThresh = get(handles.ArtifactThreshLine,'YData');
+                    ArtDetStruct.full.DCvalue = curThresh(1);
+                    errorstr = ['Warning: DynamicParameterGUI >> Could not calculate "scaled" artifact threshold. Using "DC" threshold'];
+                    if ~isempty(SpectAnalStruct.logfile)
+                        NSBlog(SpectAnalStruct.logfile,errorstr);
+                    else
+                        errordlg(errorstr,'DynamicParameterGUI');
+                    end
+                end
 
             otherwise %use DC thresh
                 curThresh = get(handles.ArtifactThreshLine,'YData');
@@ -976,6 +1006,8 @@ switch upper(ArtifactDetectionParms.algorithm)
                 Threshold = (max(BuffMax)-min(BuffMax)) * ArtifactDetectionParms.full.STDMultiplier;
                 if Threshold < min(BuffMax)*2  %deal with sig's with no artifact
                     Threshold = min(BuffMax)*2;
+                elseif isinf(Threshold) || isnan(Threshold)
+                    Threshold = ArtifactDetectionParms.full.DCvalue;
                 end
             otherwise %use DC thresh
                 Threshold = ArtifactDetectionParms.full.DCvalue;

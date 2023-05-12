@@ -52,27 +52,140 @@ if ~isempty(handles.StudyDesign)
         end
     end
     
-%% Parse file specific data from Study design
-%parallize here -> undocumented -> feature('numcores')
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %     Make a local copy in case we need to edit this.
+    %     It would make sence to clean all of this up at some point
+    options.PreClinicalFramework = handles.parameters.PreClinicalFramework;
+    options.usingUniqueParmsFiles = false;
+    
+    %% Parse file specific data from Study design
+    %parallize here -> undocumented -> feature('numcores')
     for curFile = 1:size(StudyDesign,1)
-        %determine whether to run specific channels
-        if islogical(StudyDesign{curFile,1}.AnalysisChan) %no channels specified in (false)
+        % determine whether there is a Per File - Parameter File
+        % This is currently dirty.
+        % The excell could have no entries, just the channel or both
+        % if just channel:  handles.StudyDesign{1, 1}.AnalysisChan = struct =  {'EEG1-01-00',NaN;NaN,[]}
+        % if channel + Parameter file:  handles.StudyDesign{1, 1}.AnalysisChan = struct =  {'EEG1-01-00','A:/none/no.txt';NaN,[]}
+        % if no data: handles.StudyDesign{1, 1}.AnalysisChan = false
+        
+        if islogical(handles.StudyDesign{curFile,1}.AnalysisChan)
+            %no analysis channel/parameters data
+            options.usingUniqueParmsFiles = false;
+            if options.usingUniqueParmsFiles
+                NSBlog(options.logfile,['Warning: NSB_Workflow_LIMS >> Parameter .xml not specified (using initial parameters from GUI): ',handles.StudyDesign{curFile}.AnalysisChan(1).ParamsFile]);
+                %If a unique param file was loaded and there is not one now... load the default
+                options.PreClinicalFramework = handles.parameters.PreClinicalFramework;
+            end
             if strcmpi(StudyDesign{curFile,1}.type, '.fif')
-                options.chans = handles.parameters.PreClinicalFramework.File.FIFtype;
+                options.chans = options.PreClinicalFramework.File.FIFtype;
             else
                 options.chans = [];
             end
-        else
+        elseif isstruct(handles.StudyDesign{curFile,1}.AnalysisChan)
+            %analysis channel/parameters data is in spreadsheet
             %this is a struct let it be because we will process each cahnnel seperately later
             %contains .Name and .ParamsFile
+            %
+            % First process channel names
             try
                 options.chans = StudyDesign{curFile, 1}.AnalysisChan;
             catch
                 options.chans = StudyDesign{1, 1}.AnalysisChan;
                 msg = ['Warning: NSB_Workflow_LIMS >> Channels not specified in row ',num2str(curFile +1),'. Using channels from first row.'];
-                NSBlog(handles.parameters.PreClinicalFramework.LogFile,msg);
+                NSBlog(options.logfile,msg);
             end
+            % Second process parameter filenames
+            if ~isempty(handles.StudyDesign{curFile}.AnalysisChan(1).ParamsFile)
+                options.usingUniqueParmsFiles = false;
+                
+                if ischar(handles.StudyDesign{curFile}.AnalysisChan(1).ParamsFile)
+                    %this is a NaN or String (if contains data)
+                    if exist(handles.StudyDesign{curFile}.AnalysisChan(1).ParamsFile,'file') == 2
+                        DynParamGUIStruct = [];
+                        if handles.parameters.PreClinicalFramework.MatlabPost2014
+                            DynParamGUIStruct = tinyxml2_wrap('load', handles.StudyDesign{curFile}.AnalysisChan(1).ParamsFile);
+                        else
+                            DynParamGUIStruct = xml_load(handles.StudyDesign{curFile}.AnalysisChan(1).ParamsFile);
+                        end
+                        % Update artifact detection.
+                        options.PreClinicalFramework.ArtifactDetection = DynParamGUIStruct.ArtifactDetection;
+                        NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Updating/using artifact detection parameters from: ', handles.StudyDesign{curFile}.AnalysisChan(1).ParamsFile]);
+                        NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Reference Channel will be taken from Study Design if it exists']);
+                        NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Seizure, sleep scoring, and spectral analysis parameters will not be altered']);
+                        options.usingUniqueParmsFiles = true;
+                    else
+                        NSBlog(options.logfile,['Warning: NSB_Workflow_LIMS >> Parameter .xml not found (using initial parameters from GUI): ',handles.StudyDesign{curFile}.AnalysisChan(1).ParamsFile]);
+                        %If a unique param file was loaded and there is not one... load the default
+                        options.PreClinicalFramework = handles.parameters.PreClinicalFramework;
+                        options.usingUniqueParmsFiles = false;
+                    end
+                else
+                    NSBlog(options.logfile,['Warning: NSB_Workflow_LIMS >> Parameter File value not a char array (using initial parameters from GUI): ',handles.StudyDesign{curFile}.AnalysisChan(1).ParamsFile]);
+                    %If a unique param file was loaded and there is not one... load the default
+                    options.PreClinicalFramework = handles.parameters.PreClinicalFramework;
+                    options.usingUniqueParmsFiles = false;
+                end
+            else
+                if options.usingUniqueParmsFiles
+                    NSBlog(options.logfile,['Warning: NSB_Workflow_LIMS >> Parameter .xml not specified (using initial parameters from GUI): ',handles.StudyDesign{curFile}.AnalysisChan(1).ParamsFile]);
+                    %If a unique param file was loaded and there is not one now... load the default
+                    options.PreClinicalFramework = handles.parameters.PreClinicalFramework;
+                end
+                options.usingUniqueParmsFiles = false;
+            end
+        else
+            msg = ['Warning: NSB_Workflow_LIMS >> StudyDesign is neither a logical or struct. Skipping analysis row'];
+            NSBlog(options.logfile,msg);
+            continue;
         end
+        
+%         if ~isempty(handles.StudyDesign{curFile}.AnalysisChan(1).ParamsFile)
+%             options.usingUniqueParmsFiles = true;
+%             if exist(handles.StudyDesign{curFile}.AnalysisChan(1).ParamsFile,'file') == 2
+%                 DynParamGUIStruct = [];
+%                 if handles.parameters.PreClinicalFramework.MatlabPost2014
+%                     DynParamGUIStruct = tinyxml2_wrap('load', handles.StudyDesign{curFile}.AnalysisChan(1).ParamsFile);
+%                 else
+%                     DynParamGUIStruct = xml_load(handles.StudyDesign{curFile}.AnalysisChan(1).ParamsFile);
+%                 end
+%                 % Update artifact detection.
+%                 options.PreClinicalFramework.ArtifactDetection = DynParamGUIStruct.ArtifactDetection;
+%                 NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Updating/using artifact detection parameters from: ', handles.StudyDesign{curFile}.AnalysisChan(1).ParamsFile]);
+%                 NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Reference Channel will be taken from Study Design if it exists']);
+%                 NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Seizure, sleep scoring, and spectral analysis parameters will not be altered']);
+%             else
+%                 NSBlog(options.logfile,['Warning: NSB_Workflow_LIMS >> Parameter .xml not found (using initial parameters from GUI): ',handles.StudyDesign{curFile}.AnalysisChan(1).ParamsFile]);
+%                     %If a unique param file was loaded and there is not one... load the default
+%                 options.PreClinicalFramework = handles.parameters.PreClinicalFramework;
+%                 options.usingUniqueParmsFiles = false;
+%             end
+%         else
+%             if options.usingUniqueParmsFiles
+%                NSBlog(options.logfile,['Warning: NSB_Workflow_LIMS >> Parameter .xml not specified (using initial parameters from GUI): ',handles.StudyDesign{curFile}.AnalysisChan(1).ParamsFile]);
+%                %If a unique param file was loaded and there is not one now... load the default
+%                options.PreClinicalFramework = handles.parameters.PreClinicalFramework;
+%             end
+%             options.usingUniqueParmsFiles = false;
+%         end
+%         
+%         %determine whether to run specific channels
+%         if islogical(StudyDesign{curFile,1}.AnalysisChan) %no channels specified in (false)
+%             if strcmpi(StudyDesign{curFile,1}.type, '.fif')
+%                 options.chans = options.PreClinicalFramework.File.FIFtype;
+%             else
+%                 options.chans = [];
+%             end
+%         else
+%             %this is a struct let it be because we will process each cahnnel seperately later
+%             %contains .Name and .ParamsFile
+%             try
+%                 options.chans = StudyDesign{curFile, 1}.AnalysisChan;
+%             catch
+%                 options.chans = StudyDesign{1, 1}.AnalysisChan;
+%                 msg = ['Warning: NSB_Workflow_LIMS >> Channels not specified in row ',num2str(curFile +1),'. Using channels from first row.'];
+%                 NSBlog(options.logfile,msg);
+%             end
+%         end
         %determine whether there is a dose channel (not sure how to
         %processes yet) <<optional???
         if isfield(StudyDesign{curFile,1},'DoseChan')
@@ -93,10 +206,10 @@ if ~isempty(handles.StudyDesign)
         % Reference Chan
         if ~isempty(StudyDesign{curFile,1}.RefChannel)
             options.RefChan = StudyDesign{curFile,1}.RefChannel;
-            handles.parameters.PreClinicalFramework.Reference.doReRef = true;
+            options.PreClinicalFramework.Reference.doReRef = true;
         else
             options.RefChan = '';
-            handles.parameters.PreClinicalFramework.Reference.doReRef = false;
+            options.PreClinicalFramework.Reference.doReRef = false;
         end
         %Position Template
         if ~isempty(StudyDesign{curFile,1}.PositionTemplate)
@@ -129,6 +242,11 @@ if ~isempty(handles.StudyDesign)
             options.RecordingDate = [];
         end
         % Per File - Parameter File
+        
+        % Update artifact detection.
+        
+        
+        
                 % options.chans
                 % update ONLY Reref, resample, artifact detection, seizure, and sleep detection
         
@@ -159,19 +277,19 @@ if ~isempty(handles.StudyDesign)
                 logstr = [logstr,StudyDesign{curFile,1}.name{1}];
             end   
             disp(logstr);
-            NSBlog(handles.parameters.PreClinicalFramework.LogFile,logstr);
+            NSBlog(options.logfile,logstr);
             ReadTic = tic;
             %Load Files (Import)
             [readstatus, DataStruct] = NSB_DataImportModule(StudyDesign{curFile,1},options);
-            NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: Read Time = ',num2str(toc(ReadTic)), ' (sec)']);
+            NSBlog(options.logfile,['NSB_Workflow_LIMS: Read Time = ',num2str(toc(ReadTic)), ' (sec)']);
             try
-            %NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: File Start Time = ',datestr(DataStruct.Channel(1).ts(1))]);
-            NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: File Start Time = ',datestr(DataStruct.StartDate)]);
-            NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: File End Time = ',datestr(DataStruct.Channel(1).ts(end))]);
-            NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: Timestamp Offset (To Be Applied) = ',...
-                num2str(handles.parameters.PreClinicalFramework.File.DSIoffset),' hours']);
+            %NSBlog(options.logfile,['NSB_Workflow_LIMS: File Start Time = ',datestr(DataStruct.Channel(1).ts(1))]);
+            NSBlog(options.logfile,['NSB_Workflow_LIMS: File Start Time = ',datestr(DataStruct.StartDate)]);
+            NSBlog(options.logfile,['NSB_Workflow_LIMS: File End Time = ',datestr(DataStruct.Channel(1).ts(end))]);
+            NSBlog(options.logfile,['NSB_Workflow_LIMS: Timestamp Offset (To Be Applied) = ',...
+                num2str(options.PreClinicalFramework.File.DSIoffset),' hours']);
             catch
-                 NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: No Timestamp/DSI Offset found in file']);
+                 NSBlog(options.logfile,['NSB_Workflow_LIMS: No Timestamp/DSI Offset found in file']);
             end
             
             %just clear the pannel
@@ -179,7 +297,7 @@ if ~isempty(handles.StudyDesign)
             rows = 0;
 %             txt = get(handles.status_stxt,'String');
 %             if iscell(txt)
-%                 StatusLines = handles.parameters.PreClinicalFramework.StatusLines -3;
+%                 StatusLines = options.PreClinicalFramework.StatusLines -3;
 %                 if length(txt) > StatusLines
 %                     txt = txt(end-(StatusLines-1):end);
 %                 end
@@ -195,7 +313,7 @@ if ~isempty(handles.StudyDesign)
                 txt{rows,1} = char(StudyDesign{curFile,1}.name);
                 %txt{rows,1} = char([StudyDesign{curFile,1}.path, StudyDesign{curFile,1}.name]);
                 set(handles.status_stxt,'String',txt);
-                NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: Read OK - ',[StudyDesign{curFile,1}.path, ' : ', StudyDesign{curFile,1}.name]]);
+                NSBlog(options.logfile,['NSB_Workflow_LIMS: Read OK - ',[StudyDesign{curFile,1}.path, ' : ', StudyDesign{curFile,1}.name]]);
             else
                  rows = rows+1;
                  txt{rows,1} = 'Read Failed...';
@@ -203,7 +321,7 @@ if ~isempty(handles.StudyDesign)
                  txt{rows,1} = char(StudyDesign{curFile,1}.name);
                  set(handles.status_stxt,'String',txt);
                  msg = ['NSB_Workflow_LIMS: Read FAILED - ',[StudyDesign{curFile,1}.path, ' : ', StudyDesign{curFile,1}.name]];
-                 NSBlog(handles.parameters.PreClinicalFramework.LogFile,msg);
+                 NSBlog(options.logfile,msg);
                  disp(msg);
                 continue;
             end
@@ -216,7 +334,7 @@ if ~isempty(handles.StudyDesign)
             msg = 'File Import Aborted.';
             txt = get(handles.status_stxt,'String');
             if iscell(txt)
-                StatusLines = handles.parameters.PreClinicalFramework.StatusLines -3;
+                StatusLines = options.PreClinicalFramework.StatusLines -3;
                 if length(txt) > StatusLines
                     txt = txt(end-(StatusLines-1):end);
                 end
@@ -228,7 +346,7 @@ if ~isempty(handles.StudyDesign)
             rows = rows+1;
             txt{rows,1} = txt;
             set(handles.status_stxt,'String',txt);
-            NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: Read ABORTED - ',msg]);
+            NSBlog(options.logfile,['NSB_Workflow_LIMS: Read ABORTED - ',msg]);
             return;
         end
         
@@ -239,10 +357,10 @@ if options.progress
         break;
     end
 end
-if handles.parameters.PreClinicalFramework.Reference.doReRef
+if options.PreClinicalFramework.Reference.doReRef
                 txt = get(handles.status_stxt,'String');
                     if iscell(txt)
-                        StatusLines = handles.parameters.PreClinicalFramework.StatusLines -3;
+                        StatusLines = options.PreClinicalFramework.StatusLines -3;
                         if length(txt) > StatusLines
                             txt = txt(end-(StatusLines-1):end);
                         end
@@ -255,7 +373,7 @@ if handles.parameters.PreClinicalFramework.Reference.doReRef
                     rows = rows+1;
                     txt{rows,1} = '...Re-Referencing';
                     set(handles.status_stxt,'String',txt);
-                    NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Re-referencing Channels: ',datestr(now)]);
+                    NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Re-referencing Channels: ',datestr(now)]);
                     drawnow();
     
                     [DataStruct, status] = NSB_reReference(DataStruct,options.RefChan,options);
@@ -264,13 +382,13 @@ if handles.parameters.PreClinicalFramework.Reference.doReRef
                         rows = rows+1;
                         txt{rows,1} = '...Re-Referencing Sucessful';
                         set(handles.status_stxt,'String',txt);
-                        NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Re-referencing Channels Sucessful: ',datestr(now)]);
+                        NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Re-referencing Channels Sucessful: ',datestr(now)]);
                         drawnow();
                     else
                         rows = rows+1;
                         txt{rows,1} = '...Re-Referencing Failed';
                         set(handles.status_stxt,'String',txt);
-                        NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Re-referencing Channels Failed: ',datestr(now)]);
+                        NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Re-referencing Channels Failed: ',datestr(now)]);
                         drawnow();
                     end
                     
@@ -301,7 +419,7 @@ if isstruct(StudyDesign{curFile}.AnalysisChan)
                 keepEMGChannels = selectedChan;
                 %keepChannels = [keepChannels, selectedChan];
             else
-                NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: Selecting Channels >> Chan. not found: ',StudyDesign{curFile}.EMGchan ]);
+                NSBlog(options.logfile,['NSB_Workflow_LIMS: Selecting Channels >> Chan. not found: ',StudyDesign{curFile}.EMGchan ]);
             end
         end
     else %is empty
@@ -320,7 +438,7 @@ if isstruct(StudyDesign{curFile}.AnalysisChan)
                 keepDoseChannels = selectedChan;
                 %keepChannels = [keepChannels, selectedChan];
             else
-                NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: Selecting Channels >> Chan. not found: ',StudyDesign{curFile}.DoseChan ]);
+                NSBlog(options.logfile,['NSB_Workflow_LIMS: Selecting Channels >> Chan. not found: ',StudyDesign{curFile}.DoseChan ]);
             end
         end
     end
@@ -333,15 +451,15 @@ if isstruct(StudyDesign{curFile}.AnalysisChan)
             if ~isempty(selectedChan)
                 keepChannels = [keepChannels, selectedChan];
             else
-                NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: Selecting Channels >> Chan. not found: ',StudyDesign{curFile}.AnalysisChan(curChannel).Name ]);
+                NSBlog(options.logfile,['NSB_Workflow_LIMS: Selecting Channels >> Chan. not found: ',StudyDesign{curFile}.AnalysisChan(curChannel).Name ]);
             end
         elseif ischar(StudyDesign{curFile}.AnalysisChan(curChannel).Name)
             selectedChan = find(strcmpi(ChannelNames, StudyDesign{curFile}.AnalysisChan(curChannel).Name));
             if ~isempty(selectedChan)
                 keepChannels = [keepChannels, selectedChan];
             else
-                NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: Selecting Channels >> Chan. not found: ',StudyDesign{curFile}.AnalysisChan(curChannel).Name ]);
-                NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: Selecting Channels >> Avail. Channels: ',ChannelNames{:} ]);
+                NSBlog(options.logfile,['NSB_Workflow_LIMS: Selecting Channels >> Chan. not found: ',StudyDesign{curFile}.AnalysisChan(curChannel).Name ]);
+                NSBlog(options.logfile,['NSB_Workflow_LIMS: Selecting Channels >> Avail. Channels: ',ChannelNames{:} ]);
             end
         end
     end
@@ -373,10 +491,10 @@ if options.progress
         break;
     end
 end
-if handles.parameters.PreClinicalFramework.Resample.doResample
+if options.PreClinicalFramework.Resample.doResample
     txt = get(handles.status_stxt,'String');
     if iscell(txt)
-        StatusLines = handles.parameters.PreClinicalFramework.StatusLines -2;
+        StatusLines = options.PreClinicalFramework.StatusLines -2;
         if length(txt) > StatusLines
             txt = txt(end-(StatusLines-1):end);
         end
@@ -386,10 +504,10 @@ if handles.parameters.PreClinicalFramework.Resample.doResample
         rows = 1;
     end
     rows = rows+1;
-    txt{rows,1} = ['...Resampling data to ',num2str(handles.parameters.PreClinicalFramework.Resample.newSampleRate),' Hz' ];
+    txt{rows,1} = ['...Resampling data to ',num2str(options.PreClinicalFramework.Resample.newSampleRate),' Hz' ];
     set(handles.status_stxt,'String',txt);
-    NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: resampling data to ',num2str(handles.parameters.PreClinicalFramework.Resample.newSampleRate),' Hz' ]);
-    [DataStruct,status, msg] = NSB_Resample(DataStruct, handles.parameters.PreClinicalFramework.Resample);
+    NSBlog(options.logfile,['NSB_Workflow_LIMS: resampling data to ',num2str(options.PreClinicalFramework.Resample.newSampleRate),' Hz' ]);
+    [DataStruct,status, msg] = NSB_Resample(DataStruct, options.PreClinicalFramework.Resample);
 end
 
 %% This is the main section for processing
@@ -405,7 +523,7 @@ end
             try
                 txt = get(handles.status_stxt,'String');
                     if iscell(txt)
-                        StatusLines = handles.parameters.PreClinicalFramework.StatusLines -2;
+                        StatusLines = options.PreClinicalFramework.StatusLines -2;
                         if length(txt) > StatusLines
                             txt = txt(end-(StatusLines-1):end);
                         end
@@ -420,15 +538,15 @@ end
                     rows = rows+1;
                     txt{rows,1} = ['...Analyzing Ch#',num2str(curChannel),' ',DataStruct.Channel(curChannel).Name];
                     set(handles.status_stxt,'String',txt);
-                    NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Analyzing Ch#',num2str(curChannel),' ',DataStruct.Channel(curChannel).Name,': ',datestr(now)]);
+                    NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Analyzing Ch#',num2str(curChannel),' ',DataStruct.Channel(curChannel).Name,': ',datestr(now)]);
                     else
                     rows = rows+1;
                     txt{rows,1} = ['...Analyzing Ch#',num2str(curChannel),' ',DataStruct.Channel(curChannel).Name];
                     rows = rows+1;
                     txt{rows,1} = ['...Sample Rate < 60Hz. Skipping Channel.'];
                     set(handles.status_stxt,'String',txt);
-                    NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Analyzing Ch#',num2str(curChannel),' ',DataStruct.Channel(curChannel).Name,': ',datestr(now)]);
-                    NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Sample Rate < 60Hz. Skipping invalid data.']);
+                    NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Analyzing Ch#',num2str(curChannel),' ',DataStruct.Channel(curChannel).Name,': ',datestr(now)]);
+                    NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Sample Rate < 60Hz. Skipping invalid data.']);
                     continue;
                     end
                     
@@ -441,7 +559,7 @@ end
                         else %string
                             EMGchannel = find(strcmpi(options.EMGChan,{DataStruct.Channel(:).Name})); %theoreticall only one chan but...
                             if length(EMGchannel) > 1
-                                NSBlog(handles.parameters.PreClinicalFramework.LogFile,['Warning: NSB_Workflow_LIMS >> Found Multiple EMG Channels #',num2str(EMGchannel),' ',DataStruct.Channel(curChannel).Name,': ',datestr(now)]);
+                                NSBlog(options.logfile,['Warning: NSB_Workflow_LIMS >> Found Multiple EMG Channels #',num2str(EMGchannel),' ',DataStruct.Channel(curChannel).Name,': ',datestr(now)]);
                                 EMGchannel = '';
                             end
                         end
@@ -450,7 +568,7 @@ end
                         %EMGchannel = find(strcmpi('EMG',{DataStruct.Channel(:).Name})); %theoretically only one chan but may not be...
                         EMGchannel = find(~cellfun(@isempty,strfind({DataStruct.Channel(:).Name},'EMG')));
                         if length(EMGchannel) ~= 1
-                              NSBlog(handles.parameters.PreClinicalFramework.LogFile,['Warning: NSB_Workflow_LIMS >> Found Multiple EMG Channels #',num2str(EMGchannel),' ',DataStruct.Channel(curChannel).Name,': ',datestr(now)]);
+                              NSBlog(options.logfile,['Warning: NSB_Workflow_LIMS >> Found Multiple EMG Channels #',num2str(EMGchannel),' ',DataStruct.Channel(curChannel).Name,': ',datestr(now)]);
                               EMGchannel = '';         
                         else
                             options.EMGChan = EMGchannel; %update options struct
@@ -460,7 +578,7 @@ end
                         rows = rows+1;
                         txt{rows,1} = ['...EMG Channel detected.'];
                         set(handles.status_stxt,'String',txt);
-                        NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS >> Found EMG Channel #',num2str(EMGchannel),' ',DataStruct.Channel(curChannel).Name,': ',datestr(now)]);
+                        NSBlog(options.logfile,['NSB_Workflow_LIMS >> Found EMG Channel #',num2str(EMGchannel),' ',DataStruct.Channel(curChannel).Name,': ',datestr(now)]);
                     end
                     isNotEMGChannel = true;
                     if curChannel == EMGchannel %you need this in two steps because EMGchannel may be empty and as such returns empty not false
@@ -474,7 +592,7 @@ end
                      
                     txt = get(handles.status_stxt,'String');
                     if iscell(txt)
-                        StatusLines = handles.parameters.PreClinicalFramework.StatusLines -2;
+                        StatusLines = options.PreClinicalFramework.StatusLines -2;
                         if length(txt) > StatusLines
                             txt = txt(end-(StatusLines-1):end);
                         end
@@ -486,22 +604,22 @@ end
                     rows = rows+1;
                     txt{rows,1} = '...Generating User Spectral Settings';
                     set(handles.status_stxt,'String',txt);
-                    NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Generating User Spectral Settings: ',datestr(now)]);
+                    NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Generating User Spectral Settings: ',datestr(now)]);
                     drawnow();
                     
                     %open DynamicParameterGUI for each Channel !!!!
                     clear inputParms;
-                    %inputParms.ArtifactDetection = handles.parameters.PreClinicalFramework.ArtifactDetection;
-                    %inputParms.SpectralAnalysis = handles.parameters.PreClinicalFramework.SpectralAnalysis;
+                    %inputParms.ArtifactDetection = options.PreClinicalFramework.ArtifactDetection;
+                    %inputParms.SpectralAnalysis = options.PreClinicalFramework.SpectralAnalysis;
                     %inputParms.Channel = DataStruct.Channel(curChannel);
                     %inputParms.Filename = DataStruct.Filename;
-                    inputParms.PreClinicalFramework = handles.parameters.PreClinicalFramework;
+                    inputParms.PreClinicalFramework = options.PreClinicalFramework;
                     inputParms.Filename = DataStruct.Filename;
                     
-                    [handles.parameters.PreClinicalFramework.ArtifactDetection, handles.parameters.PreClinicalFramework.SpectralAnalysis] = ...
+                    [options.PreClinicalFramework.ArtifactDetection, options.PreClinicalFramework.SpectralAnalysis] = ...
                         DynamicParameterGUI(DataStruct.Channel(curChannel),inputParms);
                     %[handles.parameters.PreClinicalFramework.ArtifactDetection, handles.parameters.PreClinicalFramework.SpectralAnalysis] = ...
-                    %    DynamicParameterGUI(inputParms,handles.parameters.PreClinicalFramework.LogFile);
+                    %    DynamicParameterGUI(inputParms,options.logfile);
                     end
                 end
                 
@@ -520,7 +638,7 @@ end
 
                         txt = get(handles.status_stxt,'String');
                         if iscell(txt)
-                            StatusLines = handles.parameters.PreClinicalFramework.StatusLines -2;
+                            StatusLines = options.PreClinicalFramework.StatusLines -2;
                             if length(txt) > StatusLines
                                 txt = txt(end-(StatusLines-1):end);
                             end
@@ -532,21 +650,19 @@ end
                         rows = rows+1;
                         txt{rows,1} = '...Detecting Artifacts';
                         set(handles.status_stxt,'String',txt);
-                        NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Detecting Artifacts: ',datestr(now)]);
+                        NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Detecting Artifacts: ',datestr(now)]);
                         drawnow();
-
-                        handles.parameters.PreClinicalFramework.ArtifactDetection.SampleRate = DataStruct.Channel(curChannel).Hz;
-                        %we dont need this next line any more since it now caried
-                        %through in this struct
-                        %handles.parameters.PreClinicalFramework.ArtifactDetection.plot=handles.AnalysisStruct.doArtifactPlot;
-                        handles.parameters.PreClinicalFramework.ArtifactDetection.logfile = handles.parameters.PreClinicalFramework.LogFile;
-                        handles.parameters.PreClinicalFramework.ArtifactDetection.plotTitle = {DataStruct.Filename,[DataStruct.SubjectID, ' ',DataStruct.Channel(curChannel).Name]};
-
+                        
+                        %This is now updated to match the options struct and handle per file parmaters file.
+                        options.PreClinicalFramework.ArtifactDetection.SampleRate = DataStruct.Channel(curChannel).Hz;
+                        options.PreClinicalFramework.ArtifactDetection.logfile = options.logfile;
+                        options.PreClinicalFramework.ArtifactDetection.plotTitle = {DataStruct.Filename,[DataStruct.SubjectID, ' ',DataStruct.Channel(curChannel).Name]};
+                        
                         [DataStruct.Channel(curChannel).Artifacts, AnalysisStatus] = NSB_ArtifactDetection(DataStruct.Channel(curChannel).Data,...
-                            handles.parameters.PreClinicalFramework.ArtifactDetection);
+                            options.PreClinicalFramework.ArtifactDetection);
                     end
                 else
-                    NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Not Detecting Artifacts on EMG Channel: ',datestr(now)]);
+                    NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Not Detecting Artifacts on EMG Channel: ',datestr(now)]);
                 end
                 
 % %%%%%%%%%%%%%%%%%%%   Run Seizure Detection
@@ -561,7 +677,7 @@ end
 
                     txt = get(handles.status_stxt,'String');
                     if iscell(txt)
-                        StatusLines = handles.parameters.PreClinicalFramework.StatusLines -2;
+                        StatusLines = options.PreClinicalFramework.StatusLines -2;
                         if length(txt) > StatusLines
                             txt = txt(end-(StatusLines-1):end);
                         end
@@ -573,15 +689,15 @@ end
                     rows = rows+1;
                     txt{rows,1} = '...Running Seizure Analysis';
                     set(handles.status_stxt,'String',txt);
-                    NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Running Seizure Analysis: ',datestr(now)]);
+                    NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Running Seizure Analysis: ',datestr(now)]);
                     drawnow();
                     
                     clear inputParms;
-                    inputParms = handles.parameters.PreClinicalFramework.SeizureAnalysis;
+                    inputParms = options.PreClinicalFramework.SeizureAnalysis;
                     inputParms.SampleRate = DataStruct.Channel(curChannel).Hz;
-                    inputParms.logfile = handles.parameters.PreClinicalFramework.LogFile;
+                    inputParms.logfile = options.logfile;
                     %inputParms.Artifacts = DataStruct.Channel(curChannel).Artifacts;
-                    inputParms.Artifacts =handles.parameters.PreClinicalFramework.ArtifactDetection;
+                    inputParms.Artifacts =options.PreClinicalFramework.ArtifactDetection;
                     inputParms.plotTitle = {DataStruct.Filename,[DataStruct.SubjectID, ' ',DataStruct.Channel(curChannel).Name]};
                     
                     %Currently This handles a single channel at a time _> returns additional struct within a channel
@@ -591,7 +707,7 @@ end
 %CSV/Xls output here
                     txt = get(handles.status_stxt,'String');
                     if iscell(txt)
-                        StatusLines = handles.parameters.PreClinicalFramework.StatusLines -2;
+                        StatusLines = options.PreClinicalFramework.StatusLines -2;
                         if length(txt) > StatusLines
                             txt = txt(end-(StatusLines-1):end);
                         end
@@ -603,23 +719,23 @@ end
                     rows = rows+1;
                     txt{rows,1} = '...Saving Seizure Analysis';
                     set(handles.status_stxt,'String',txt);
-                    NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Saving Seizure Analysis: ',datestr(now)]);
+                    NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Saving Seizure Analysis: ',datestr(now)]);
                     drawnow();
           %ToDo better error and reporting          
                     [AnalysisStatus, MetaData] = NSB_SaveSeizureData(DataStruct, handles, curFile, curChannel, DataStruct.Channel(curChannel).ChNumber);
                     
   % % % % % %    Temp hack << AnalysisParameterEditor is not handling this correctly !!              %
-                    handles.parameters.PreClinicalFramework.SeizureAnalysis.doSeizureReport = false;
+                    options.PreClinicalFramework.SeizureAnalysis.doSeizureReport = false;
   % % % % % %  
-                    if handles.parameters.PreClinicalFramework.SeizureAnalysis.doSeizureReport
+                    if options.PreClinicalFramework.SeizureAnalysis.doSeizureReport
                         clear inputParms;
                         inputParms.handles = handles;
                         inputParms.EEGChannel = curChannel;
                         inputParms.ActivityChannel = [];
                         %options.SeizureChannel = SeizureChannel;
                         inputParms.curFile = curFile;
-                        inputParms.logfile = handles.parameters.PreClinicalFramework.LogFile;
-                        inputParms.TemplateFile = handles.parameters.PreClinicalFramework.SeizureAnalysis.SeizureReport_Template;
+                        inputParms.logfile = options.logfile;
+                        inputParms.TemplateFile = options.PreClinicalFramework.SeizureAnalysis.SeizureReport_Template;
                         try
                         [status, filenames] = NSB_SaveSeizureReport(DataStruct, inputParms);
                         catch ME2
@@ -645,7 +761,7 @@ end
 
                     txt = get(handles.status_stxt,'String');
                     if iscell(txt)
-                        StatusLines = handles.parameters.PreClinicalFramework.StatusLines -2;
+                        StatusLines = options.PreClinicalFramework.StatusLines -2;
                         if length(txt) > StatusLines
                             txt = txt(end-(StatusLines-1):end);
                         end
@@ -657,17 +773,17 @@ end
                     rows = rows+1;
                     txt{rows,1} = '...Running Spectral Analysis';
                     set(handles.status_stxt,'String',txt);
-                    NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Running Spectral Analysis: ',datestr(now)]);
+                    NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Running Spectral Analysis: ',datestr(now)]);
                     drawnow();
                     
                     clear inputParms;
-                    inputParms = handles.parameters.PreClinicalFramework.SpectralAnalysis;
-                    if strcmpi(handles.parameters.PreClinicalFramework.SpectralAnalysis.FFTWindowSizeMethod,'Auto')
+                    inputParms = options.PreClinicalFramework.SpectralAnalysis;
+                    if strcmpi(options.PreClinicalFramework.SpectralAnalysis.FFTWindowSizeMethod,'Auto')
                         inputParms.FFTWindowSize = [];
                     else
-                        inputParms.FFTWindowSize = handles.parameters.PreClinicalFramework.SpectralAnalysis.FFTWindowSize;
+                        inputParms.FFTWindowSize = options.PreClinicalFramework.SpectralAnalysis.FFTWindowSize;
                     end
-                    inputParms.nanMean = handles.parameters.PreClinicalFramework.SpectralAnalysis.nanMean;
+                    inputParms.nanMean = options.PreClinicalFramework.SpectralAnalysis.nanMean;
                     %these were the defaults prior to Version 1.27 (in the new wersion it is unclear how this will perform).
                     %inputParms.FFTWindowSize = 10; %10 Seconds << 10x sample rate will always greate 0.1Hz div of Spectrum!                   
                     %inputParms.FFTWindowSize = handles.parameters.PreClinicalFramework.ArtifactDetection.SampleRate * 10;%10 Seconds
@@ -678,14 +794,14 @@ end
                         DataStruct.Channel(curChannel).Spectrum_freqs,...
                         DataStruct.Channel(curChannel).Spectrum_validBins,...
                         AnalysisStatus] = NSB_SpectralAnalysis(DataStruct.Channel(curChannel).Data,...
-                        handles.parameters.PreClinicalFramework.SpectralAnalysis.FinalTimeResolution,...
-                        handles.parameters.PreClinicalFramework.SpectralAnalysis.FinalFreqResolution,...
-                        handles.parameters.PreClinicalFramework.ArtifactDetection.SampleRate, inputParms);
+                        options.PreClinicalFramework.SpectralAnalysis.FinalTimeResolution,...
+                        options.PreClinicalFramework.SpectralAnalysis.FinalFreqResolution,...
+                        options.PreClinicalFramework.ArtifactDetection.SampleRate, inputParms);
                                    
 %CSV/Xls output here
                     txt = get(handles.status_stxt,'String');
                     if iscell(txt)
-                        StatusLines = handles.parameters.PreClinicalFramework.StatusLines -2;
+                        StatusLines = options.PreClinicalFramework.StatusLines -2;
                         if length(txt) > StatusLines
                             txt = txt(end-(StatusLines-1):end);
                         end
@@ -697,7 +813,7 @@ end
                     rows = rows+1;
                     txt{rows,1} = '...Saving Spectral Analysis';
                     set(handles.status_stxt,'String',txt);
-                    NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Saving Spectral Analysis: ',datestr(now)]);
+                    NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Saving Spectral Analysis: ',datestr(now)]);
                     drawnow();
                     
                     [AnalysisStatus, MetaData] = NSB_SaveSpectralData(DataStruct, handles, curFile, curChannel, DataStruct.Channel(curChannel).ChNumber);
@@ -740,7 +856,7 @@ end
  
                     txt = get(handles.status_stxt,'String');
                     if iscell(txt)
-                        StatusLines = handles.parameters.PreClinicalFramework.StatusLines -2;
+                        StatusLines = options.PreClinicalFramework.StatusLines -2;
                         if length(txt) > StatusLines
                             txt = txt(end-(StatusLines-1):end);
                         end
@@ -752,11 +868,11 @@ end
                     rows = rows+1;
                     txt{rows,1} = '...Running Sleep Scoring';
                     set(handles.status_stxt,'String',txt);
-                    NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Running Sleep Scoring: ',datestr(now)]);
+                    NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Running Sleep Scoring: ',datestr(now)]);
                     drawnow();
                     
                     % Need to ID EEG and EMG Channel
-                    inputParms = handles.parameters.PreClinicalFramework;
+                    %inputParms = handles.parameters.PreClinicalFramework; %used in line 852;
                     
                     %detect EMG channel
                     if ~isempty(options.EMGChan)
@@ -769,7 +885,7 @@ end
                                 %report error
                                 txt = get(handles.status_stxt,'String');
                                 if iscell(txt)
-                                    StatusLines = handles.parameters.PreClinicalFramework.StatusLines -2;
+                                    StatusLines = options.PreClinicalFramework.StatusLines -2;
                                     if length(txt) > StatusLines
                                         txt = txt(end-(StatusLines-1):end);
                                     end
@@ -781,7 +897,7 @@ end
                                 rows = rows+1;
                                 txt{rows,1} = 'Warning: More than 1 EMG channel found. Ignoring EMG for Sleep Scoring';
                                 set(handles.status_stxt,'String',txt);
-                                NSBlog(handles.parameters.PreClinicalFramework.LogFile,['Warning: NSB_Workflow_LIMS >> More than 1 EMG channel found. Ignoring EMG for Sleep Scoring: ',datestr(now)]);
+                                NSBlog(options.logfile,['Warning: NSB_Workflow_LIMS >> More than 1 EMG channel found. Ignoring EMG for Sleep Scoring: ',datestr(now)]);
                             end
                         end
                     else
@@ -793,7 +909,7 @@ end
                                 %report error
                                 txt = get(handles.status_stxt,'String');
                                 if iscell(txt)
-                                    StatusLines = handles.parameters.PreClinicalFramework.StatusLines -2;
+                                    StatusLines = options.PreClinicalFramework.StatusLines -2;
                                     if length(txt) > StatusLines
                                         txt = txt(end-(StatusLines-1):end);
                                     end
@@ -805,11 +921,11 @@ end
                                 rows = rows+1;
                                 txt{rows,1} = 'Warning: Did not find 1 EMG channel. Ignoring EMG for Sleep Scoring';
                                 set(handles.status_stxt,'String',txt);
-                                NSBlog(handles.parameters.PreClinicalFramework.LogFile,['Warning: NSB_Workflow_LIMS >> Did not find 1 EMG channel. Ignoring EMG for Sleep Scoring: ',datestr(now)]);
+                                NSBlog(options.logfile,['Warning: NSB_Workflow_LIMS >> Did not find 1 EMG channel. Ignoring EMG for Sleep Scoring: ',datestr(now)]);
                            
                         else
                             options.EMGChan = EMGchannel; %update options struct
-                            NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS >> Using Found EMG Channel #',num2str(EMGchannel),' for Sleep Scoring: ',datestr(now)]);
+                            NSBlog(options.logfile,['NSB_Workflow_LIMS >> Using Found EMG Channel #',num2str(EMGchannel),' for Sleep Scoring: ',datestr(now)]);
                         end
                     end
                     doSleepScoring = true;
@@ -824,7 +940,7 @@ end
                         
                         %SleepScoring now returns a new channel
                         HypnogramChannel = length(DataStruct.Channel) +1;
-                        [SleepScore, status] = NSB_SleepScoring(DataStruct.Channel(curChannel), DataStruct.Channel(EMGchannel), [], inputParms);
+                        [SleepScore, status] = NSB_SleepScoring(DataStruct.Channel(curChannel), DataStruct.Channel(EMGchannel), [], options.PreClinicalFramework);
                         %Because these may have different structures, manually populate new struct.
                         if status
                             SleepScoreFieldnames = fieldnames(SleepScore);
@@ -838,7 +954,7 @@ end
                     %CSV/Xls output here
                     txt = get(handles.status_stxt,'String');
                     if iscell(txt)
-                        StatusLines = handles.parameters.PreClinicalFramework.StatusLines -2;
+                        StatusLines = options.PreClinicalFramework.StatusLines -2;
                         if length(txt) > StatusLines
                             txt = txt(end-(StatusLines-1):end);
                         end
@@ -850,7 +966,7 @@ end
                     rows = rows+1;
                     txt{rows,1} = '...Saving Somnogram Data';
                     set(handles.status_stxt,'String',txt);
-                    NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Saving Somnogram Data: ',datestr(now)]);
+                    NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Saving Somnogram Data: ',datestr(now)]);
                     drawnow();
                     
                     MetaData = [];
@@ -861,7 +977,7 @@ end
                         %report error
                         txt = get(handles.status_stxt,'String');
                         if iscell(txt)
-                            StatusLines = handles.parameters.PreClinicalFramework.StatusLines -2;
+                            StatusLines = options.PreClinicalFramework.StatusLines -2;
                             if length(txt) > StatusLines
                                 txt = txt(end-(StatusLines-1):end);
                             end
@@ -873,7 +989,7 @@ end
                         rows = rows+1;
                         txt{rows,1} = 'Warning: Could not generate hypnogram channel. Will not save Sleep Scoring';
                         set(handles.status_stxt,'String',txt);
-                        NSBlog(handles.parameters.PreClinicalFramework.LogFile,['Warning: NSB_Workflow_LIMS >> Could not generate hypnogram channel. Will not save Sleep Scoring: ',datestr(now)]);
+                        NSBlog(options.logfile,['Warning: NSB_Workflow_LIMS >> Could not generate hypnogram channel. Will not save Sleep Scoring: ',datestr(now)]);
                     end
                     %Add file location meta data to Study Desighn for
                     %analysis later
@@ -901,15 +1017,16 @@ end
                         StudyDesign{curFile,3} = FileInfo;%return it
                     end
 %Generate Sleep Report
-                    if handles.parameters.PreClinicalFramework.Scoring.doSomnogramReport && doSleepScoring
+                    if options.PreClinicalFramework.Scoring.doSomnogramReport && doSleepScoring
+                        % THese options calls are ugly and need a cleanup!
                         options.handles = handles;
                         options.EEGChannel = curChannel;
                         options.EMGChannel = EMGchannel;
                         options.ActivityChannel = [];
                         options.HypnogramChannel = HypnogramChannel;
                         options.curFile = curFile;
-                        options.logfile = handles.parameters.PreClinicalFramework.LogFile;
-                        options.TemplateFile = handles.parameters.PreClinicalFramework.Scoring.SomnogramReport_Template;
+                        %options.logfile = handles.parameters.PreClinicalFramework.LogFile;
+                        options.TemplateFile = options.PreClinicalFramework.Scoring.SomnogramReport_Template;
                         try
                         [status, filenames] = NSB_SaveHypnogramReport(DataStruct, options);
                         catch ME2
@@ -932,7 +1049,7 @@ end
                 
                 txt = get(handles.status_stxt,'String');
                 if iscell(txt)
-                    StatusLines = handles.parameters.PreClinicalFramework.StatusLines -2;
+                    StatusLines = options.PreClinicalFramework.StatusLines -2;
                     if length(txt) > StatusLines
                         txt = txt(end-(StatusLines-1):end);
                     end
@@ -953,7 +1070,7 @@ end
             try
             txt = get(handles.status_stxt,'String');
                     if iscell(txt)
-                        StatusLines = handles.parameters.PreClinicalFramework.StatusLines -3;
+                        StatusLines = options.PreClinicalFramework.StatusLines -3;
                         if length(txt) > StatusLines
                             txt = txt(end-(StatusLines-1):end);
                         end
@@ -968,7 +1085,7 @@ end
                     rows = rows+1;
                     txt{rows,1} = '...Writing EDF';
                     set(handles.status_stxt,'String',txt);
-                    NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Writing EDF: ',datestr(now)]);
+                    NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Writing EDF: ',datestr(now)]);
                     drawnow();
                     %\/\/ StudyDesign{curFile}.path{1} shuuld be a string <may be diff if dir load \/\/\/
                     status = NSB_EDFplusWriter(DataStruct, fullfile(char(StudyDesign{curFile}.path), 'NSB_Output', [StudyDesign{curFile}.name,'.edf']),options);
@@ -976,20 +1093,20 @@ end
                         rows = rows+1;
                         txt{rows,1} = '...Write Sucessful';
                         set(handles.status_stxt,'String',txt);
-                        NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Write EDF Sucessful: ',datestr(now)]);
+                        NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Write EDF Sucessful: ',datestr(now)]);
                         drawnow();
                     else
                         rows = rows+1;
                         txt{rows,1} = '...Write Failed';
                         set(handles.status_stxt,'String',txt);
-                        NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Write EDF Failed: ',datestr(now)]);
+                        NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Write EDF Failed: ',datestr(now)]);
                         drawnow();
                     end
 %                     else
 %                     rows = rows+1;
 %                     txt{rows,1} = '...Skipping EDF->EDF';
 %                     set(handles.status_stxt,'String',txt);
-%                     NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Skipping EDF->EDF: ',datestr(now)]);
+%                     NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Skipping EDF->EDF: ',datestr(now)]);
 %                     drawnow();
 %                     end
         %EDF error catch
@@ -1005,7 +1122,7 @@ end
                 
                 txt = get(handles.status_stxt,'String');
                 if iscell(txt)
-                    StatusLines = handles.parameters.PreClinicalFramework.StatusLines -2;
+                    StatusLines = options.PreClinicalFramework.StatusLines -2;
                     if length(txt) > StatusLines
                         txt = txt(end-(StatusLines-1):end);
                     end
@@ -1025,7 +1142,7 @@ end
 try, delete(hWaitbar); end
 txt = get(handles.status_stxt,'String');
 if iscell(txt)
-    StatusLines = handles.parameters.PreClinicalFramework.StatusLines -5;
+    StatusLines = options.PreClinicalFramework.StatusLines -5;
     if StatusLines < 1, StatusLines = 1; end;
     if length(txt) > StatusLines
         txt = txt(end-(StatusLines-1):end);
@@ -1043,7 +1160,7 @@ end
 rows = rows+1;
 txt{rows,1} = 'Finished Analysis';
 set(handles.status_stxt,'String',txt);
-NSBlog(handles.parameters.PreClinicalFramework.LogFile,['>> NSB_Workflow_LIMS: Finished Signal Processing: ',datestr(now)]);
+NSBlog(options.logfile,['>> NSB_Workflow_LIMS: Finished Signal Processing: ',datestr(now)]);
 
 %% Cleanup
 clear DataStruct;
@@ -1055,7 +1172,7 @@ if handles.AnalysisStruct.doStatsTable
     %now that analysis is complete, aggrigate results in table
     txt = get(handles.status_stxt,'String');
     if iscell(txt)
-        StatusLines = handles.parameters.PreClinicalFramework.StatusLines -2;
+        StatusLines = options.PreClinicalFramework.StatusLines -2;
         if length(txt) > StatusLines
             txt = txt(end-(StatusLines-1):end);
         end
@@ -1067,10 +1184,10 @@ if handles.AnalysisStruct.doStatsTable
     rows = rows+1;
     txt{rows,1} = 'Generating Statistical Table';
     set(handles.status_stxt,'String',txt);
-    NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Generating Statistical Table: ',datestr(now)]);
+    NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Generating Statistical Table: ',datestr(now)]);
     drawnow();
     if ~isempty(handles.AnalysisStruct.StudyDesignFilePath)
-        inputParms.logfile = handles.parameters.PreClinicalFramework.LogFile;
+        inputParms.logfile = options.logfile;
         inputParms.progress = handles.parameters.PreClinicalFramework.useWaitBar;
         inputParms.doMeanBaseline = handles.parameters.PreClinicalFramework.StatsTable.doMeanBaseline;
         
@@ -1082,20 +1199,20 @@ if handles.AnalysisStruct.doStatsTable
             rows = rows+1;
             txt{rows,1} = '...Statistical Table Generation Sucessful';
             set(handles.status_stxt,'String',txt);
-            NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Write Statistical Table Sucessful: ',datestr(now)]);
+            NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Write Statistical Table Sucessful: ',datestr(now)]);
             drawnow();
         else
             rows = rows+1;
             txt{rows,1} = '...Statistical Table Generation Failed';
             set(handles.status_stxt,'String',txt);
-            NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Write Statistical Table Failed: ',datestr(now)]);
+            NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Write Statistical Table Failed: ',datestr(now)]);
             drawnow();
         end
     else
         rows = rows+1;
         txt{rows,1} = 'No Study Design File to Analyze. Not Generating Stats Table.';
         set(handles.status_stxt,'String',txt);
-        NSBlog(handles.parameters.PreClinicalFramework.LogFile,['NSB_Workflow_LIMS: ...Statistical Table Failed. No Study Design File: ',datestr(now)]);
+        NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Statistical Table Failed. No Study Design File: ',datestr(now)]);
     end
 end
 
