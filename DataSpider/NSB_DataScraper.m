@@ -7,8 +7,7 @@ function status = NSB_DataScraper(LookinDirs,ShredFlag)
 % num runs; 
 
 %Requires: 'XML Toolbox'
-
-parms = NSB_ParameterFile();
+[~,parms] = NSB_ParameterHandler('new');
 RunForeverLoop = true;
 
 if nargin < 1

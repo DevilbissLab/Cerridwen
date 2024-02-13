@@ -15,12 +15,24 @@ function [status, msg] = NSB_Workflow_LIMS(handles)
 % March 10 2013, Version 2.0
 
 %Also see MATLAB Memory Shielding
-%StudyDesign{1,1}.path sometime is cell when loading DSI DATA from Dir. 
+%StudyDesign{1,1}.path sometime is cell when loading DSI DATA from Dir.
 
+%% Notes
+% From main GUI there is passed 
+%   handles.parameters
+%   handles.licensing
+%   handles.StudyDesign
+%   handles.AnalysisStruct
+%
+% Not sure why we need the options struct - seems redundant
+% options is a sloppy holdover and can be updated somtime
+
+%%
 status = false;
 msg = '';
 AbortFileLoad = false;
 NSBlog(handles.parameters.PreClinicalFramework.LogFile,'NSB_Workflow_LIMS: Begin');
+
 %Here setup Log files and Licencing
 options.logfile = handles.parameters.PreClinicalFramework.LogFile;
 handles.parameters.PreClinicalFramework.SpectralAnalysis.logfile = handles.parameters.PreClinicalFramework.LogFile;
@@ -107,7 +119,7 @@ if ~isempty(handles.StudyDesign)
                         else
                             DynParamGUIStruct = xml_load(handles.StudyDesign{curFile}.AnalysisChan(1).ParamsFile);
                         end
-                        % Update artifact detection.
+                        % Update ONLY the artifact detection.
                         options.PreClinicalFramework.ArtifactDetection = DynParamGUIStruct.ArtifactDetection;
                         NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Updating/using artifact detection parameters from: ', handles.StudyDesign{curFile}.AnalysisChan(1).ParamsFile]);
                         NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Reference Channel will be taken from Study Design if it exists']);
@@ -350,6 +362,27 @@ if ~isempty(handles.StudyDesign)
             return;
         end
         
+%% Detrend if requested (not an option - by default)
+if options.progress
+    if getappdata(hWaitbar,'Canceling')
+        AbortFileLoad = true;
+        break;
+    end
+end
+
+if options.PreClinicalFramework.Resample.Detrend
+    status = NSB_UpdateStatusWindow(handles, '...Detrending Channels', 'NSB_Workflow_LIMS:');
+
+    [DataStruct, status] = LIMS_DetrendData(handles, DataStruct);
+
+    if status
+        status = NSB_UpdateStatusWindow(handles, '...Detrending Channels Sucessful.', 'NSB_Workflow_LIMS:');
+    else
+        status = NSB_UpdateStatusWindow(handles, '...Detrending Channels Failed.', 'NSB_Workflow_LIMS:');
+    end
+end
+
+
 %% Re-Reference if Requested
 if options.progress
     if getappdata(hWaitbar,'Canceling')
@@ -358,40 +391,15 @@ if options.progress
     end
 end
 if options.PreClinicalFramework.Reference.doReRef
-                txt = get(handles.status_stxt,'String');
-                    if iscell(txt)
-                        StatusLines = options.PreClinicalFramework.StatusLines -3;
-                        if length(txt) > StatusLines
-                            txt = txt(end-(StatusLines-1):end);
-                        end
-                        rows = length(txt);
-                    else
-                        txt = {txt}; %create cell array
-                        rows = 1;
-                    end
-                    
-                    rows = rows+1;
-                    txt{rows,1} = '...Re-Referencing';
-                    set(handles.status_stxt,'String',txt);
-                    NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Re-referencing Channels: ',datestr(now)]);
-                    drawnow();
-    
-                    [DataStruct, status] = NSB_reReference(DataStruct,options.RefChan,options);
-                    
-                    if status
-                        rows = rows+1;
-                        txt{rows,1} = '...Re-Referencing Sucessful';
-                        set(handles.status_stxt,'String',txt);
-                        NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Re-referencing Channels Sucessful: ',datestr(now)]);
-                        drawnow();
-                    else
-                        rows = rows+1;
-                        txt{rows,1} = '...Re-Referencing Failed';
-                        set(handles.status_stxt,'String',txt);
-                        NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Re-referencing Channels Failed: ',datestr(now)]);
-                        drawnow();
-                    end
-                    
+    status = NSB_UpdateStatusWindow(handles, '...Re-Referencing Channels', 'NSB_Workflow_LIMS:');
+
+    [DataStruct, status] = NSB_reReference(DataStruct,options.RefChan,options);
+
+    if status
+        status = NSB_UpdateStatusWindow(handles, '...Re-Referencing Channels Sucessful:', 'NSB_Workflow_LIMS:');
+    else
+        status = NSB_UpdateStatusWindow(handles, '...Re-Referencing Channels Failed:', 'NSB_Workflow_LIMS:');
+    end
 end
 
 %% Remove unwanted Channels
@@ -510,7 +518,9 @@ if options.PreClinicalFramework.Resample.doResample
     [DataStruct,status, msg] = NSB_Resample(DataStruct, options.PreClinicalFramework.Resample);
 end
 
-%% This is the main section for processing
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+% This is the main section for processing
  %Process each Channel of DataStruct
         for curChannel = 1:length(DataStruct.Channel)
             if options.progress
@@ -1042,7 +1052,7 @@ end
                 errorstr = ['ERROR: NSB_Workflow_LIMS >> ',ME.message];
                 if ~isempty(ME.stack)
                     errorstr = [errorstr,' Function: ',ME.stack(1).name,' Line # ',num2str(ME.stack(1).line)];
-                NSBlog(options.logfile,errorstr);
+                    NSBlog(options.logfile,errorstr);
                 end
                 errordlg({['Failed Processing Channel #',num2str(curChannel),' file: ',[StudyDesign{curFile,1}.path, ' ', StudyDesign{curFile,1}.name]],...
                     errorstr},'NSB_SpectralAnalysis');

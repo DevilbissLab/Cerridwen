@@ -60,7 +60,7 @@ function PreclinicalEEGFramework_OpeningFcn(hObject, eventdata, handles, varargi
 handles.output = hObject;
 
 %Load the ParamatersFile
-handles.parameters = NSB_ParameterFile();
+[~,handles.parameters] = NSB_ParameterHandler('new');
 handles.licensing = NSB_LoadLicensing(handles.parameters.PreClinicalFramework.LogFile);
 
 %Set default fields
@@ -429,151 +429,22 @@ else
     txt = {txt}; %create cell array
     rows = 1;
 end
-if iscell(get(hObject,'String')) NewFile = get(hObject,'String');NewFile = NewFile{1}; else NewFile = get(hObject,'String'); end
-NSBlog(handles.parameters.PreClinicalFramework.LogFile,['Loading: ',NewFile]);
+if iscell(get(hObject,'String')) NewFile = get(hObject,'String'); NewFile = NewFile{1}; else NewFile = get(hObject,'String'); end
+%Load and merge new structure
+%Start rewrite
 if exist(NewFile,'file') == 2
-    DynParamGUIStruct = [];
-    if handles.parameters.PreClinicalFramework.MatlabPost2014
-        DynParamGUIStruct = tinyxml2_wrap('load', NewFile);
-    else
-        DynParamGUIStruct = xml_load(NewFile);
-    end
-    if ~isempty(DynParamGUIStruct)
-            NSBlog(handles.parameters.PreClinicalFramework.LogFile,['Sucessfully Loaded: ',NewFile]);
-    end
-    handles.parameters.PreClinicalFramework.ArtifactDetection = DynParamGUIStruct.ArtifactDetection;
-    handles.parameters.PreClinicalFramework.SpectralAnalysis = DynParamGUIStruct.SpectralAnalysis;
-    %if exists
-    if isfield(DynParamGUIStruct, 'Scoring')
-        if ~isfield(DynParamGUIStruct.Scoring,'StageEpoch')
-            DynParamGUIStruct.Scoring.StageEpoch = handles.parameters.PreClinicalFramework.Scoring.StageEpoch;
-        end
-        if ~isfield(DynParamGUIStruct.Scoring,'GMMinit')
-            DynParamGUIStruct.Scoring.GMMinit = handles.parameters.PreClinicalFramework.Scoring.GMMinit;
-        end
-        if ~isfield(DynParamGUIStruct.Scoring,'doSomnogramReport')
-            DynParamGUIStruct.Scoring.doSomnogramReport = false;
-        end
-        handles.parameters.PreClinicalFramework.Scoring = DynParamGUIStruct.Scoring;
-    end
-    if isfield(DynParamGUIStruct, 'StatsTable'), handles.parameters.PreClinicalFramework.StatsTable = DynParamGUIStruct.StatsTable; end
-    if isfield(DynParamGUIStruct, 'rules'), handles.parameters.PreClinicalFramework.rules = DynParamGUIStruct.rules; end
-    if isfield(DynParamGUIStruct, 'File')
-        handles.parameters.PreClinicalFramework.XLSoutput = DynParamGUIStruct.File.XLSoutput;
-        handles.parameters.PreClinicalFramework.useWaitBar = DynParamGUIStruct.File.useWaitBar;
-        handles.parameters.PreClinicalFramework.File.DSIoffset = DynParamGUIStruct.File.DSIoffset;
-        if isfield(DynParamGUIStruct.File,'BioBookoutput')
-            handles.parameters.PreClinicalFramework.BioBookoutput = DynParamGUIStruct.File.BioBookoutput;
-        else
-            handles.parameters.PreClinicalFramework.BioBookoutput = true;
-        end
-        if isfield(DynParamGUIStruct.File,'FIFtype')
-            handles.parameters.PreClinicalFramework.File.FIFtype = DynParamGUIStruct.File.FIFtype;
-        else
-            handles.parameters.PreClinicalFramework.File.FIFtype = 'EEG';
-        end
-    end
-    %version 2.xx
-    if isfield(DynParamGUIStruct, 'OutputDir')
-        handles.parameters.PreClinicalFramework.OutputDir = DynParamGUIStruct.OutputDir;
-        %find log file and move it
-        %also update handles.parameters.PreClinicalFramework.LogFile
-        if exist(handles.parameters.PreClinicalFramework.OutputDir,'dir') ~=7
-            mkdir(handles.parameters.PreClinicalFramework.OutputDir);
-        end
-        if exist(handles.parameters.PreClinicalFramework.LogFile,'file') == 2
-            
-            [LogPath,logName,LogExt] = fileparts(handles.parameters.PreClinicalFramework.LogFile);
-            if ~strcmpi(LogPath,handles.parameters.PreClinicalFramework.OutputDir)
-            NewLogPath = fullfile(handles.parameters.PreClinicalFramework.OutputDir,[logName,LogExt]);
-            movefile(handles.parameters.PreClinicalFramework.LogFile, NewLogPath);
-            end
-        end
-    end
-    if isfield(DynParamGUIStruct, 'SeizureAnalysis')
-        handles.parameters.PreClinicalFramework.SeizureAnalysis = DynParamGUIStruct.SeizureAnalysis;
-    end
-    if isfield(DynParamGUIStruct, 'Resample')
-        handles.parameters.PreClinicalFramework.Resample = DynParamGUIStruct.Resample;
-    end
+    [status, handles.parameters, msg] = NSB_ParameterHandler('merge', handles.parameters, NewFile);
     handles.AnalysisStruct.isloadedGlobalParameterFile = true;
-    
-    rows = rows+1;
-    txt{rows,1} = 'User Parameter File...';
-    rows = rows+1;
-    txt{rows,1} = NewFile;
-    set(handles.status_stxt,'String',txt);
+
 else
     oldFilename = NewFile;
     [fn, xmlpath] = uigetfile({'*.xml','NexStep Biomarkers Parameter Files (*.xml)';'*.*',  'All Files (*.*)'},'Choose a parameter file');
     if ischar(xmlpath)
         NewFile = fullfile(xmlpath,fn);
         if exist(NewFile,'file') == 2
-            if handles.parameters.PreClinicalFramework.MatlabPost2014
-                DynParamGUIStruct = tinyxml2_wrap('load', NewFile);
-            else
-                DynParamGUIStruct = xml_load(NewFile);
-            end
-            handles.parameters.PreClinicalFramework.ArtifactDetection = DynParamGUIStruct.ArtifactDetection;
-            handles.parameters.PreClinicalFramework.SpectralAnalysis = DynParamGUIStruct.SpectralAnalysis;
-            %if exists
-            if isfield(DynParamGUIStruct, 'Scoring')
-                if ~isfield(DynParamGUIStruct.Scoring,'StageEpoch')
-                    DynParamGUIStruct.Scoring.StageEpoch = handles.parameters.PreClinicalFramework.Scoring.StageEpoch;
-                end
-                if ~isfield(DynParamGUIStruct.Scoring,'GMMinit')
-                    DynParamGUIStruct.Scoring.GMMinit = handles.parameters.PreClinicalFramework.Scoring.GMMinit;
-                end
-                if ~isfield(DynParamGUIStruct.Scoring,'doSomnogramReport')
-                    DynParamGUIStruct.Scoring.doSomnogramReport = false;
-                end
-                if ~isfield(DynParamGUIStruct.Scoring,'SomnogramReport_Template')
-                    DynParamGUIStruct.Scoring.SomnogramReport_Template = handles.parameters.PreClinicalFramework.Scoring.SomnogramReport_Template;
-                end
-                handles.parameters.PreClinicalFramework.Scoring = DynParamGUIStruct.Scoring;
-            end
-            if isfield(DynParamGUIStruct, 'StatsTable'), handles.parameters.PreClinicalFramework.StatsTable = DynParamGUIStruct.StatsTable; end
-            if isfield(DynParamGUIStruct, 'rules'), handles.parameters.PreClinicalFramework.rules = DynParamGUIStruct.rules; end
-            if isfield(DynParamGUIStruct, 'File')
-                handles.parameters.PreClinicalFramework.XLSoutput = DynParamGUIStruct.File.XLSoutput;
-                handles.parameters.PreClinicalFramework.useWaitBar = DynParamGUIStruct.File.useWaitBar;
-                handles.parameters.PreClinicalFramework.File.DSIoffset = DynParamGUIStruct.File.DSIoffset;
-                if isfield(DynParamGUIStruct.File,'BioBookoutput')
-                    handles.parameters.PreClinicalFramework.BioBookoutput = DynParamGUIStruct.File.BioBookoutput;
-                else
-                    handles.parameters.PreClinicalFramework.BioBookoutput = true;
-                end
-                if isfield(DynParamGUIStruct.File,'FIFtype')
-                    handles.parameters.PreClinicalFramework.File.FIFtype = DynParamGUIStruct.File.FIFtype;
-                else
-                    handles.parameters.PreClinicalFramework.File.FIFtype = 'EEG';
-                end
-            end
-            %version 2.xx
-            if isfield(DynParamGUIStruct, 'OutputDir')
-                handles.parameters.PreClinicalFramework.OutputDir = DynParamGUIStruct.OutputDir;
-                %find log file and move it
-                %also update handles.parameters.PreClinicalFramework.LogFile
-                if exist(handles.parameters.PreClinicalFramework.OutputDir,'dir') ~=7
-                    mkdir(handles.parameters.PreClinicalFramework.OutputDir);
-                end
-                if exist(handles.parameters.PreClinicalFramework.LogFile,'file') == 2
-                    
-            [LogPath,logName,LogExt] = fileparts(handles.parameters.PreClinicalFramework.LogFile);
-            if ~strcmpi(LogPath,handles.parameters.PreClinicalFramework.OutputDir)
-            NewLogPath = fullfile(handles.parameters.PreClinicalFramework.OutputDir,[logName,LogExt]);
-            movefile(handles.parameters.PreClinicalFramework.LogFile, NewLogPath);
-            end
-                end
-            end
-            if isfield(DynParamGUIStruct, 'SeizureAnalysis')
-                handles.parameters.PreClinicalFramework.SeizureAnalysis = DynParamGUIStruct.SeizureAnalysis;
-            end
-            if isfield(DynParamGUIStruct, 'Resample')
-                handles.parameters.PreClinicalFramework.Resample = DynParamGUIStruct.Resample;
-            end
+            [status, handles.parameters, msg] = NSB_ParameterHandler('merge', handles.parameters, NewFile);
             handles.AnalysisStruct.isloadedGlobalParameterFile = true;
-            
+
             set(handles.AnalysisParameters_txt, 'String', NewFile);
             rows = rows+1;
             txt{rows,1} = 'User Parameter File...';
@@ -595,6 +466,173 @@ else
         set(handles.status_stxt,'String',txt);
     end
 end
+%end rewrite
+
+% NSBlog(handles.parameters.PreClinicalFramework.LogFile,['Loading: ',NewFile]);
+% if exist(NewFile,'file') == 2
+%     DynParamGUIStruct = [];
+%     if handles.parameters.PreClinicalFramework.MatlabPost2014
+%         DynParamGUIStruct = tinyxml2_wrap('load', NewFile);
+%     else
+%         DynParamGUIStruct = xml_load(NewFile);
+%     end
+%     if ~isempty(DynParamGUIStruct)
+%             NSBlog(handles.parameters.PreClinicalFramework.LogFile,['Sucessfully Loaded: ',NewFile]);
+%     end
+%     handles.parameters.PreClinicalFramework.ArtifactDetection = DynParamGUIStruct.ArtifactDetection;
+%     handles.parameters.PreClinicalFramework.SpectralAnalysis = DynParamGUIStruct.SpectralAnalysis;
+%     %if exists
+%     if isfield(DynParamGUIStruct, 'Scoring')
+%         if ~isfield(DynParamGUIStruct.Scoring,'StageEpoch')
+%             DynParamGUIStruct.Scoring.StageEpoch = handles.parameters.PreClinicalFramework.Scoring.StageEpoch;
+%         end
+%         if ~isfield(DynParamGUIStruct.Scoring,'GMMinit')
+%             DynParamGUIStruct.Scoring.GMMinit = handles.parameters.PreClinicalFramework.Scoring.GMMinit;
+%         end
+%         if ~isfield(DynParamGUIStruct.Scoring,'doSomnogramReport')
+%             DynParamGUIStruct.Scoring.doSomnogramReport = false;
+%         end
+%         handles.parameters.PreClinicalFramework.Scoring = DynParamGUIStruct.Scoring;
+%     end
+%     if isfield(DynParamGUIStruct, 'StatsTable'), handles.parameters.PreClinicalFramework.StatsTable = DynParamGUIStruct.StatsTable; end
+%     if isfield(DynParamGUIStruct, 'rules'), handles.parameters.PreClinicalFramework.rules = DynParamGUIStruct.rules; end
+%     if isfield(DynParamGUIStruct, 'File')
+%         handles.parameters.PreClinicalFramework.XLSoutput = DynParamGUIStruct.File.XLSoutput;
+%         handles.parameters.PreClinicalFramework.useWaitBar = DynParamGUIStruct.File.useWaitBar;
+%         handles.parameters.PreClinicalFramework.File.DSIoffset = DynParamGUIStruct.File.DSIoffset;
+%         if isfield(DynParamGUIStruct.File,'BioBookoutput')
+%             handles.parameters.PreClinicalFramework.BioBookoutput = DynParamGUIStruct.File.BioBookoutput;
+%         else
+%             handles.parameters.PreClinicalFramework.BioBookoutput = true;
+%         end
+%         if isfield(DynParamGUIStruct.File,'FIFtype')
+%             handles.parameters.PreClinicalFramework.File.FIFtype = DynParamGUIStruct.File.FIFtype;
+%         else
+%             handles.parameters.PreClinicalFramework.File.FIFtype = 'EEG';
+%         end
+%     end
+%     %version 2.xx
+%     if isfield(DynParamGUIStruct, 'OutputDir')
+%         handles.parameters.PreClinicalFramework.OutputDir = DynParamGUIStruct.OutputDir;
+%         %find log file and move it
+%         %also update handles.parameters.PreClinicalFramework.LogFile
+%         if exist(handles.parameters.PreClinicalFramework.OutputDir,'dir') ~=7
+%             mkdir(handles.parameters.PreClinicalFramework.OutputDir);
+%         end
+%         if exist(handles.parameters.PreClinicalFramework.LogFile,'file') == 2
+%             
+%             [LogPath,logName,LogExt] = fileparts(handles.parameters.PreClinicalFramework.LogFile);
+%             if ~strcmpi(LogPath,handles.parameters.PreClinicalFramework.OutputDir)
+%             NewLogPath = fullfile(handles.parameters.PreClinicalFramework.OutputDir,[logName,LogExt]);
+%             movefile(handles.parameters.PreClinicalFramework.LogFile, NewLogPath);
+%             end
+%         end
+%     end
+%     if isfield(DynParamGUIStruct, 'SeizureAnalysis')
+%         handles.parameters.PreClinicalFramework.SeizureAnalysis = DynParamGUIStruct.SeizureAnalysis;
+%     end
+%     if isfield(DynParamGUIStruct, 'Resample')
+%         handles.parameters.PreClinicalFramework.Resample = DynParamGUIStruct.Resample;
+%     end
+%     handles.AnalysisStruct.isloadedGlobalParameterFile = true;
+%     
+%     rows = rows+1;
+%     txt{rows,1} = 'User Parameter File...';
+%     rows = rows+1;
+%     txt{rows,1} = NewFile;
+%     set(handles.status_stxt,'String',txt);
+% else
+%     oldFilename = NewFile;
+%     [fn, xmlpath] = uigetfile({'*.xml','NexStep Biomarkers Parameter Files (*.xml)';'*.*',  'All Files (*.*)'},'Choose a parameter file');
+%     if ischar(xmlpath)
+%         NewFile = fullfile(xmlpath,fn);
+%         if exist(NewFile,'file') == 2
+%             if handles.parameters.PreClinicalFramework.MatlabPost2014
+%                 DynParamGUIStruct = tinyxml2_wrap('load', NewFile);
+%             else
+%                 DynParamGUIStruct = xml_load(NewFile);
+%             end
+%             handles.parameters.PreClinicalFramework.ArtifactDetection = DynParamGUIStruct.ArtifactDetection;
+%             handles.parameters.PreClinicalFramework.SpectralAnalysis = DynParamGUIStruct.SpectralAnalysis;
+%             %if exists
+%             if isfield(DynParamGUIStruct, 'Scoring')
+%                 if ~isfield(DynParamGUIStruct.Scoring,'StageEpoch')
+%                     DynParamGUIStruct.Scoring.StageEpoch = handles.parameters.PreClinicalFramework.Scoring.StageEpoch;
+%                 end
+%                 if ~isfield(DynParamGUIStruct.Scoring,'GMMinit')
+%                     DynParamGUIStruct.Scoring.GMMinit = handles.parameters.PreClinicalFramework.Scoring.GMMinit;
+%                 end
+%                 if ~isfield(DynParamGUIStruct.Scoring,'doSomnogramReport')
+%                     DynParamGUIStruct.Scoring.doSomnogramReport = false;
+%                 end
+%                 if ~isfield(DynParamGUIStruct.Scoring,'SomnogramReport_Template')
+%                     DynParamGUIStruct.Scoring.SomnogramReport_Template = handles.parameters.PreClinicalFramework.Scoring.SomnogramReport_Template;
+%                 end
+%                 handles.parameters.PreClinicalFramework.Scoring = DynParamGUIStruct.Scoring;
+%             end
+%             if isfield(DynParamGUIStruct, 'StatsTable'), handles.parameters.PreClinicalFramework.StatsTable = DynParamGUIStruct.StatsTable; end
+%             if isfield(DynParamGUIStruct, 'rules'), handles.parameters.PreClinicalFramework.rules = DynParamGUIStruct.rules; end
+%             if isfield(DynParamGUIStruct, 'File')
+%                 handles.parameters.PreClinicalFramework.XLSoutput = DynParamGUIStruct.File.XLSoutput;
+%                 handles.parameters.PreClinicalFramework.useWaitBar = DynParamGUIStruct.File.useWaitBar;
+%                 handles.parameters.PreClinicalFramework.File.DSIoffset = DynParamGUIStruct.File.DSIoffset;
+%                 if isfield(DynParamGUIStruct.File,'BioBookoutput')
+%                     handles.parameters.PreClinicalFramework.BioBookoutput = DynParamGUIStruct.File.BioBookoutput;
+%                 else
+%                     handles.parameters.PreClinicalFramework.BioBookoutput = true;
+%                 end
+%                 if isfield(DynParamGUIStruct.File,'FIFtype')
+%                     handles.parameters.PreClinicalFramework.File.FIFtype = DynParamGUIStruct.File.FIFtype;
+%                 else
+%                     handles.parameters.PreClinicalFramework.File.FIFtype = 'EEG';
+%                 end
+%             end
+%             %version 2.xx
+%             if isfield(DynParamGUIStruct, 'OutputDir')
+%                 handles.parameters.PreClinicalFramework.OutputDir = DynParamGUIStruct.OutputDir;
+%                 %find log file and move it
+%                 %also update handles.parameters.PreClinicalFramework.LogFile
+%                 if exist(handles.parameters.PreClinicalFramework.OutputDir,'dir') ~=7
+%                     mkdir(handles.parameters.PreClinicalFramework.OutputDir);
+%                 end
+%                 if exist(handles.parameters.PreClinicalFramework.LogFile,'file') == 2
+%                     
+%             [LogPath,logName,LogExt] = fileparts(handles.parameters.PreClinicalFramework.LogFile);
+%             if ~strcmpi(LogPath,handles.parameters.PreClinicalFramework.OutputDir)
+%             NewLogPath = fullfile(handles.parameters.PreClinicalFramework.OutputDir,[logName,LogExt]);
+%             movefile(handles.parameters.PreClinicalFramework.LogFile, NewLogPath);
+%             end
+%                 end
+%             end
+%             if isfield(DynParamGUIStruct, 'SeizureAnalysis')
+%                 handles.parameters.PreClinicalFramework.SeizureAnalysis = DynParamGUIStruct.SeizureAnalysis;
+%             end
+%             if isfield(DynParamGUIStruct, 'Resample')
+%                 handles.parameters.PreClinicalFramework.Resample = DynParamGUIStruct.Resample;
+%             end
+%             handles.AnalysisStruct.isloadedGlobalParameterFile = true;
+%             
+%             set(handles.AnalysisParameters_txt, 'String', NewFile);
+%             rows = rows+1;
+%             txt{rows,1} = 'User Parameter File...';
+%             rows = rows+1;
+%             txt{rows,1} = NewFile;
+%             set(handles.status_stxt,'String',txt);
+%         else
+%             handles.AnalysisStruct.isloadedGlobalParameterFile = false;
+%             set(handles.AnalysisParameters_txt, 'String', oldFilename);
+%             rows = rows+1;
+%             txt{rows,1} = 'Set Parameter File: Does not exist';
+%             set(handles.status_stxt,'String',txt);
+%         end
+%     else
+%         handles.AnalysisStruct.isloadedGlobalParameterFile = false;
+%         set(handles.AnalysisParameters_txt, 'String', oldFilename);
+%         rows = rows+1;
+%         txt{rows,1} = 'Set Parameter File...Canceled';
+%         set(handles.status_stxt,'String',txt);
+%     end
+% end
 NSBlog(handles.parameters.PreClinicalFramework.LogFile,['User Parameters File Selected: ',NewFile]);
 guidata(hObject, handles);
 
@@ -603,134 +641,180 @@ function LoadParm_but_Callback(hObject, eventdata, handles)
 % hObject    handle to LoadParm_but (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-txt = get(handles.status_stxt,'String');
-if iscell(txt)
-    StatusLines = handles.parameters.PreClinicalFramework.StatusLines -3;
-    if length(txt) > StatusLines
-        txt = txt(end-(StatusLines-1):end);
-    end
-    rows = length(txt);     
-else
-    txt = {txt}; %create cell array
-    rows = 1;
-end
+
+% txt = get(handles.status_stxt,'String');
+% if iscell(txt)
+%     StatusLines = handles.parameters.PreClinicalFramework.StatusLines -3;
+%     if length(txt) > StatusLines
+%         txt = txt(end-(StatusLines-1):end);
+%     end
+%     rows = length(txt);
+% else
+%     txt = {txt}; %create cell array
+%     rows = 1;
+% end
+
 oldFilename = set(hObject, 'String');
 newFilename = [];
 [fn, xmlpath] = uigetfile({'*.xml','NexStep Biomarkers Parameter Files (*.xml)';'*.*',  'All Files (*.*)'},'Choose a parameter file');
 if ischar(xmlpath)
-    newFilename = fullfile(xmlpath,fn);
-    %update handles with info...
-    NSBlog(handles.parameters.PreClinicalFramework.LogFile,['Loading: ',newFilename]);
-    if exist(newFilename,'file') == 2
-        DynParamGUIStruct = [];
-        if handles.parameters.PreClinicalFramework.MatlabPost2014
-            DynParamGUIStruct = tinyxml2_wrap('load', newFilename);
-        else
-            DynParamGUIStruct = xml_load(newFilename);
-        end
-        if ~isempty(DynParamGUIStruct)
-            NSBlog(handles.parameters.PreClinicalFramework.LogFile,['Sucessfully Loaded: ',newFilename]);
-        end
-            
-        handles.parameters.PreClinicalFramework.ArtifactDetection = DynParamGUIStruct.ArtifactDetection;%check to see how handle logfiles...
-        handles.parameters.PreClinicalFramework.SpectralAnalysis = DynParamGUIStruct.SpectralAnalysis;
-        %if exists
-        if isfield(DynParamGUIStruct, 'Scoring')
-            if ~isfield(DynParamGUIStruct.Scoring,'StageEpoch')
-                DynParamGUIStruct.Scoring.StageEpoch = handles.parameters.PreClinicalFramework.Scoring.StageEpoch;
-            end
-            if ~isfield(DynParamGUIStruct.Scoring,'GMMinit')
-                DynParamGUIStruct.Scoring.GMMinit = handles.parameters.PreClinicalFramework.Scoring.GMMinit;
-            end
-            if ~isfield(DynParamGUIStruct.Scoring,'doSomnogramReport')
-                DynParamGUIStruct.Scoring.doSomnogramReport = false;
-            end
-            if ~isfield(DynParamGUIStruct.Scoring,'SomnogramReport_Template')
-                DynParamGUIStruct.Scoring.SomnogramReport_Template = handles.parameters.PreClinicalFramework.Scoring.SomnogramReport_Template;
-            end
-            handles.parameters.PreClinicalFramework.Scoring = DynParamGUIStruct.Scoring;
-        end
-         if isfield(DynParamGUIStruct, 'StatsTable'), handles.parameters.PreClinicalFramework.StatsTable = DynParamGUIStruct.StatsTable; end
-        if isfield(DynParamGUIStruct, 'rules'), handles.parameters.PreClinicalFramework.rules = DynParamGUIStruct.rules; end
-        if isfield(DynParamGUIStruct, 'File')
-            handles.parameters.PreClinicalFramework.XLSoutput = DynParamGUIStruct.File.XLSoutput;
-            handles.parameters.PreClinicalFramework.useWaitBar = DynParamGUIStruct.File.useWaitBar;
-            handles.parameters.PreClinicalFramework.File.DSIoffset = DynParamGUIStruct.File.DSIoffset;
-            if isfield(DynParamGUIStruct.File,'BioBookoutput')
-                handles.parameters.PreClinicalFramework.BioBookoutput = DynParamGUIStruct.File.BioBookoutput;
-            else
-                handles.parameters.PreClinicalFramework.BioBookoutput = true;
-            end
-            if isfield(DynParamGUIStruct.File,'FIFtype')
-                handles.parameters.PreClinicalFramework.File.FIFtype = DynParamGUIStruct.File.FIFtype;
-            else
-                handles.parameters.PreClinicalFramework.File.FIFtype = 'EEG';
-            end
-            if isfield(DynParamGUIStruct.File,'FIF')
-                handles.parameters.PreClinicalFramework.File.FIF.assumeTemplateChOrderCorrect = DynParamGUIStruct.File.FIF.assumeTemplateChOrderCorrect;
-                handles.parameters.PreClinicalFramework.File.FIF.showHeadPlot = DynParamGUIStruct.File.FIF.showHeadPlot;
-            else
-                handles.parameters.PreClinicalFramework.File.FIF.assumeTemplateChOrderCorrect = false;
-                handles.parameters.PreClinicalFramework.File.FIF.showHeadPlot = false;
-            end
-            
-        end
-        %version 2.xx
-        if isfield(DynParamGUIStruct, 'OutputDir')
-            handles.parameters.PreClinicalFramework.OutputDir = DynParamGUIStruct.OutputDir;
-            %find log file and move it
-            %also update handles.parameters.PreClinicalFramework.LogFile
-            if exist(handles.parameters.PreClinicalFramework.OutputDir,'dir') ~=7
-                %if the drive doesn't exist than this will fail
-                try
-                    mkdir(handles.parameters.PreClinicalFramework.OutputDir);
-                catch
-                    warning('PreclinicalEEGFramework:LoadParm - Cannot create output dir stored in analysis parameters file: ',handles.parameters.PreClinicalFramework.OutputDir);
-                    handles.parameters.PreClinicalFramework.OutputDir = uigetdir('.', 'Choose an Analysis Output Directory');
-                end
-            end
-            if exist(handles.parameters.PreClinicalFramework.LogFile,'file') == 2
-                
-            [LogPath,logName,LogExt] = fileparts(handles.parameters.PreClinicalFramework.LogFile);
-            if ~strcmpi(LogPath,handles.parameters.PreClinicalFramework.OutputDir)
-            NewLogPath = fullfile(handles.parameters.PreClinicalFramework.OutputDir,[logName,LogExt]);
-            movefile(handles.parameters.PreClinicalFramework.LogFile, NewLogPath);
-            end
-            end
-        end
-        if isfield(DynParamGUIStruct, 'SeizureAnalysis')
-            handles.parameters.PreClinicalFramework.SeizureAnalysis = DynParamGUIStruct.SeizureAnalysis;
-        end
-        if isfield(DynParamGUIStruct, 'Resample')
-            handles.parameters.PreClinicalFramework.Resample = DynParamGUIStruct.Resample;
-        end
-        
-        %handles.AnalysisStruct.ParameterFilePath = fullfile(path,fn);
+    NewFile = fullfile(xmlpath,fn);
+    %Load and merge new structure
+    %Start rewrite
+    if exist(NewFile,'file') == 2
+        [status, handles.parameters, msg] = NSB_ParameterHandler('merge', handles.parameters, NewFile);
         handles.AnalysisStruct.isloadedGlobalParameterFile = true;
-        set(handles.AnalysisParameters_txt, 'String', newFilename);
-        
-        rows = rows+1;
-        txt{rows,1} = 'User Parameter File...';
-        rows = rows+1;
-        txt{rows,1} = newFilename;
-        set(handles.status_stxt,'String',txt);
+        set(handles.AnalysisParameters_txt, 'String', NewFile);
+
+
+        status = NSB_UpdateStatusWindow(handles, 'User Parameter File...', 'PreclinicalFramework');
+        status = NSB_UpdateStatusWindow(handles, NewFile, 'PreclinicalFramework');
+% 
+%         rows = rows+1;
+%         txt{rows,1} = 'User Parameter File...';
+%         rows = rows+1;
+%         txt{rows,1} = NewFile;
+%         set(handles.status_stxt,'String',txt);
     else
         handles.AnalysisStruct.isloadedGlobalParameterFile = false;
         set(handles.AnalysisParameters_txt, 'String', oldFilename);
-        rows = rows+1;
-        txt{rows,1} = 'Set Parameter File: Does not exist';
-        set(handles.status_stxt,'String',txt);
+
+        status = NSB_UpdateStatusWindow(handles, 'Set Parameter File: Does not exist', 'PreclinicalFramework');
+
+%         rows = rows+1;
+%         txt{rows,1} = 'Set Parameter File: Does not exist';
+%         set(handles.status_stxt,'String',txt);
     end
 else
-    newFilename = oldFilename;
+    NewFile = oldFilename;
     handles.AnalysisStruct.isloadedGlobalParameterFile = false;
     %handles.AnalysisStruct.ParameterFilePath = [];
     set(handles.AnalysisParameters_txt, 'String', oldFilename);
-    rows = rows+1;
-    txt{rows,1} = 'Set Parameter File...Canceled';
-    set(handles.status_stxt,'String',txt);
+
+    status = NSB_UpdateStatusWindow(handles, 'Set Parameter File...Canceled', 'PreclinicalFramework');
+
+%     rows = rows+1;
+%     txt{rows,1} = 'Set Parameter File...Canceled';
+%     set(handles.status_stxt,'String',txt);
 end
-NSBlog(handles.parameters.PreClinicalFramework.LogFile,['User Parameters File Selected: ',newFilename]);
+%end rewrite
+
+
+% 
+% 
+% 
+%     %update handles with info...
+%     NSBlog(handles.parameters.PreClinicalFramework.LogFile,['Loading: ',newFilename]);
+%     if exist(newFilename,'file') == 2
+%         DynParamGUIStruct = [];
+%         if handles.parameters.PreClinicalFramework.MatlabPost2014
+%             DynParamGUIStruct = tinyxml2_wrap('load', newFilename);
+%         else
+%             DynParamGUIStruct = xml_load(newFilename);
+%         end
+%         if ~isempty(DynParamGUIStruct)
+%             NSBlog(handles.parameters.PreClinicalFramework.LogFile,['Sucessfully Loaded: ',newFilename]);
+%         end
+%             
+%         handles.parameters.PreClinicalFramework.ArtifactDetection = DynParamGUIStruct.ArtifactDetection;%check to see how handle logfiles...
+%         handles.parameters.PreClinicalFramework.SpectralAnalysis = DynParamGUIStruct.SpectralAnalysis;
+%         %if exists
+%         if isfield(DynParamGUIStruct, 'Scoring')
+%             if ~isfield(DynParamGUIStruct.Scoring,'StageEpoch')
+%                 DynParamGUIStruct.Scoring.StageEpoch = handles.parameters.PreClinicalFramework.Scoring.StageEpoch;
+%             end
+%             if ~isfield(DynParamGUIStruct.Scoring,'GMMinit')
+%                 DynParamGUIStruct.Scoring.GMMinit = handles.parameters.PreClinicalFramework.Scoring.GMMinit;
+%             end
+%             if ~isfield(DynParamGUIStruct.Scoring,'doSomnogramReport')
+%                 DynParamGUIStruct.Scoring.doSomnogramReport = false;
+%             end
+%             if ~isfield(DynParamGUIStruct.Scoring,'SomnogramReport_Template')
+%                 DynParamGUIStruct.Scoring.SomnogramReport_Template = handles.parameters.PreClinicalFramework.Scoring.SomnogramReport_Template;
+%             end
+%             handles.parameters.PreClinicalFramework.Scoring = DynParamGUIStruct.Scoring;
+%         end
+%         if isfield(DynParamGUIStruct, 'StatsTable'), handles.parameters.PreClinicalFramework.StatsTable = DynParamGUIStruct.StatsTable; end
+%         if isfield(DynParamGUIStruct, 'rules'), handles.parameters.PreClinicalFramework.rules = DynParamGUIStruct.rules; end
+%         if isfield(DynParamGUIStruct, 'File')
+%             handles.parameters.PreClinicalFramework.XLSoutput = DynParamGUIStruct.File.XLSoutput;
+%             handles.parameters.PreClinicalFramework.useWaitBar = DynParamGUIStruct.File.useWaitBar;
+%             handles.parameters.PreClinicalFramework.File.DSIoffset = DynParamGUIStruct.File.DSIoffset;
+%             if isfield(DynParamGUIStruct.File,'BioBookoutput')
+%                 handles.parameters.PreClinicalFramework.BioBookoutput = DynParamGUIStruct.File.BioBookoutput;
+%             else
+%                 handles.parameters.PreClinicalFramework.BioBookoutput = true;
+%             end
+%             if isfield(DynParamGUIStruct.File,'FIFtype')
+%                 handles.parameters.PreClinicalFramework.File.FIFtype = DynParamGUIStruct.File.FIFtype;
+%             else
+%                 handles.parameters.PreClinicalFramework.File.FIFtype = 'EEG';
+%             end
+%             if isfield(DynParamGUIStruct.File,'FIF')
+%                 handles.parameters.PreClinicalFramework.File.FIF.assumeTemplateChOrderCorrect = DynParamGUIStruct.File.FIF.assumeTemplateChOrderCorrect;
+%                 handles.parameters.PreClinicalFramework.File.FIF.showHeadPlot = DynParamGUIStruct.File.FIF.showHeadPlot;
+%             else
+%                 handles.parameters.PreClinicalFramework.File.FIF.assumeTemplateChOrderCorrect = false;
+%                 handles.parameters.PreClinicalFramework.File.FIF.showHeadPlot = false;
+%             end
+%             
+%         end
+%         %version 2.xx
+%         if isfield(DynParamGUIStruct, 'OutputDir')
+%             handles.parameters.PreClinicalFramework.OutputDir = DynParamGUIStruct.OutputDir;
+%             %find log file and move it
+%             %also update handles.parameters.PreClinicalFramework.LogFile
+%             if exist(handles.parameters.PreClinicalFramework.OutputDir,'dir') ~=7
+%                 %if the drive doesn't exist than this will fail
+%                 try
+%                     mkdir(handles.parameters.PreClinicalFramework.OutputDir);
+%                 catch
+%                     warning('PreclinicalEEGFramework:LoadParm - Cannot create output dir stored in analysis parameters file: ',handles.parameters.PreClinicalFramework.OutputDir);
+%                     handles.parameters.PreClinicalFramework.OutputDir = uigetdir('.', 'Choose an Analysis Output Directory');
+%                 end
+%             end
+%             if exist(handles.parameters.PreClinicalFramework.LogFile,'file') == 2
+%                 
+%             [LogPath,logName,LogExt] = fileparts(handles.parameters.PreClinicalFramework.LogFile);
+%             if ~strcmpi(LogPath,handles.parameters.PreClinicalFramework.OutputDir)
+%             NewLogPath = fullfile(handles.parameters.PreClinicalFramework.OutputDir,[logName,LogExt]);
+%             movefile(handles.parameters.PreClinicalFramework.LogFile, NewLogPath);
+%             end
+%             end
+%         end
+%         if isfield(DynParamGUIStruct, 'SeizureAnalysis')
+%             handles.parameters.PreClinicalFramework.SeizureAnalysis = DynParamGUIStruct.SeizureAnalysis;
+%         end
+%         if isfield(DynParamGUIStruct, 'Resample')
+%             handles.parameters.PreClinicalFramework.Resample = DynParamGUIStruct.Resample;
+%         end
+%         
+%         %handles.AnalysisStruct.ParameterFilePath = fullfile(path,fn);
+%         handles.AnalysisStruct.isloadedGlobalParameterFile = true;
+%         set(handles.AnalysisParameters_txt, 'String', newFilename);
+%         
+%         rows = rows+1;
+%         txt{rows,1} = 'User Parameter File...';
+%         rows = rows+1;
+%         txt{rows,1} = newFilename;
+%         set(handles.status_stxt,'String',txt);
+%     else
+%         handles.AnalysisStruct.isloadedGlobalParameterFile = false;
+%         set(handles.AnalysisParameters_txt, 'String', oldFilename);
+%         rows = rows+1;
+%         txt{rows,1} = 'Set Parameter File: Does not exist';
+%         set(handles.status_stxt,'String',txt);
+%     end
+% else
+%     newFilename = oldFilename;
+%     handles.AnalysisStruct.isloadedGlobalParameterFile = false;
+%     %handles.AnalysisStruct.ParameterFilePath = [];
+%     set(handles.AnalysisParameters_txt, 'String', oldFilename);
+%     rows = rows+1;
+%     txt{rows,1} = 'Set Parameter File...Canceled';
+%     set(handles.status_stxt,'String',txt);
+% end
+NSBlog(handles.parameters.PreClinicalFramework.LogFile,['User Parameters File Selected: ',NewFile]);
 guidata(hObject, handles);
 
 % --- Executes on button press in EditAnalysisParms_but.
@@ -756,7 +840,8 @@ NSBlog(handles.parameters.PreClinicalFramework.LogFile,['Generating Analyses Par
 drawnow;
 [EditorOutput, status] = AnalysisParameterEditor(handles.parameters.PreClinicalFramework);
 if status
-    handles.parameters.PreClinicalFramework = EditorOutput;
+    [~ , handles.parameters.PreClinicalFramework] = NSB_ParameterHandler('merge', handles.parameters.PreClinicalFramework, EditorOutput);
+    %handles.parameters.PreClinicalFramework = EditorOutput;
     %You have moved the output folder so update log location.
     if isfield(handles.parameters.PreClinicalFramework, 'OutputDir')
         %find log file and move it

@@ -8,7 +8,7 @@ function [] = NSB_DataSpider(path)
 
 %% Now that GUI is setup
 % load the parameter file
-handles.paramaters = NSB_ParameterFile();
+[~,handles.parameters] = NSB_ParameterHandler('new');
 
 if nargin > 0
     handles.paramaters.DataSpider.StartDirs = path;

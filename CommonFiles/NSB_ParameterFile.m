@@ -68,7 +68,8 @@ function parms = NSB_ParameterFile()
 % August 7 2017 ver 2.22 Added Debugging to XMLload, Added PGI DecisionTree signal envelope signal feature
 % April 20 2021 ver 3.00 Codebase brought into DevilbissLab at Rowan and will be further developed v2.22
 % April 27 2021 ver 3.01 Small bug fixes with figure naming and file naming
-% June 14 2022 ver 3.02 Fixed LIMS issue with file specific parameters 
+% June 14 2022 ver 3.02 Fixed LIMS issue with file specific parameters
+% Feb 13 2024 ver 3.10 Forcing signal detrend before artifact detection. Started to cleanup code and parameter handling.
 %
 %
 % NSB Data Format
@@ -115,7 +116,7 @@ parms.DataSpider.HIPAA.ShredPartial = true;
 
 %% PreclinicalFramework Parameters 
 parms.PreClinicalFramework.Name = 'Cerridwen EEG Framework';
-parms.PreClinicalFramework.Version = 'v.3.01';
+parms.PreClinicalFramework.Version = 'v.3.10';
 parms.PreClinicalFramework.MatlabVersion = version;
 parms.PreClinicalFramework.HomeDir = cd; %Where is this exe (or working dir) located
 if isdeployed
@@ -155,6 +156,7 @@ parms.PreClinicalFramework.Reference.ReRefChan = '';
 parms.PreClinicalFramework.Resample.doResample = true;
 parms.PreClinicalFramework.Resample.newSampleRate = 250; %Hz
 parms.PreClinicalFramework.Resample.InterpSamples = 50; 
+parms.PreClinicalFramework.Resample.Detrend = true;
 
 %StatsTable specific parameters
 parms.PreClinicalFramework.StatsTable.doMeanBaseline = false;
