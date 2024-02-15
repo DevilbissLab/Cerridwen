@@ -451,7 +451,7 @@ for curRow = 2:DesignLength
             end
         end
         
-        SpectralFileList = SpectralFileList(SpectralData_IDX); % <File List conditions on SubjectID
+        SpectralFileList = SpectralFileList(SpectralData_IDX); % <File List conditions on DateID
         SomnoFileList = SomnoFileList(SomnoData_IDX);
         SleepStatsList = SleepStatsList(SleepStatsList_IDX);
         SeizureStatsList = SeizureStatsList(SeizureStatsList_IDX);

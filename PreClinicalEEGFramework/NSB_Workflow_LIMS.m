@@ -119,8 +119,11 @@ if ~isempty(handles.StudyDesign)
                         else
                             DynParamGUIStruct = xml_load(handles.StudyDesign{curFile}.AnalysisChan(1).ParamsFile);
                         end
+
+                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                         % Update ONLY the artifact detection.
-                        options.PreClinicalFramework.ArtifactDetection = DynParamGUIStruct.ArtifactDetection;
+                        [status, options.PreClinicalFramework.ArtifactDetection, msg] = NSB_ParameterHandler('mergeExtAnalysisParms', options.PreClinicalFramework.ArtifactDetection, DynParamGUIStruct.ArtifactDetection);
+
                         NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Updating/using artifact detection parameters from: ', handles.StudyDesign{curFile}.AnalysisChan(1).ParamsFile]);
                         NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Reference Channel will be taken from Study Design if it exists']);
                         NSBlog(options.logfile,['NSB_Workflow_LIMS: ...Seizure, sleep scoring, and spectral analysis parameters will not be altered']);
@@ -198,8 +201,7 @@ if ~isempty(handles.StudyDesign)
 %                 NSBlog(options.logfile,msg);
 %             end
 %         end
-        %determine whether there is a dose channel (not sure how to
-        %processes yet) <<optional???
+        %determine whether there is a dose channel (not sure how to processes yet) <<optional???
         if isfield(StudyDesign{curFile,1},'DoseChan')
             if all(isnan(StudyDesign{curFile,1}.DoseChan)) || isempty(StudyDesign{curFile,1}.DoseChan) %all() because this fould also be a string
                 options.DoseChan = '';
@@ -291,6 +293,7 @@ if ~isempty(handles.StudyDesign)
             disp(logstr);
             NSBlog(options.logfile,logstr);
             ReadTic = tic;
+
             %Load Files (Import)
             [readstatus, DataStruct] = NSB_DataImportModule(StudyDesign{curFile,1},options);
             NSBlog(options.logfile,['NSB_Workflow_LIMS: Read Time = ',num2str(toc(ReadTic)), ' (sec)']);

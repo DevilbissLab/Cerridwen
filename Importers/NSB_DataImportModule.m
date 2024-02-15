@@ -208,7 +208,7 @@ if isempty(DataStruct.StartDate)
         disp(infostr);
     end
 elseif  DataStruct.StartDate ~= options.RecordingDate
-    infostr = ['Warning: NSB_DataImportModule >> File StartDate and StudyDesign StartDate are not the same! User will not be able to create statistial table from Study Design.'];
+    infostr = ['Warning: NSB_DataImportModule >> File StartDate and StudyDesign StartDate are not the same! User may not be able to create statistial table from Study Design.'];
     infostr2 = ['Warning: NSB_DataImportModule >> File StartDate: ',datestr(DataStruct.StartDate,29),' StudyDesign StartDate: ',datestr(options.RecordingDate,29)];
     if ~isempty(options.logfile)
         NSBlog(options.logfile,infostr);
@@ -218,6 +218,16 @@ elseif  DataStruct.StartDate ~= options.RecordingDate
         disp(infostr2);
     end
 end
+if  DataStruct.StartDate == 0
+    infostr = ['Warning: NSB_DataImportModule >> File StartDate=0. ', fileinfo.type, ' may use relative timestamps. Using StudyDesign StartDate: ',datestr(options.RecordingDate,29)];
+    if ~isempty(options.logfile)
+        NSBlog(options.logfile,infostr);
+    else
+        disp(infostr);
+    end
+    DataStruct.StartDate = options.RecordingDate;
+end
+
 if isempty(DataStruct.SubjectID)
     if ~isempty(options.subjectID)
         DataStruct.SubjectID = options.subjectID;

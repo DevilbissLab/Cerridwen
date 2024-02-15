@@ -314,12 +314,15 @@ else
     errordlg(errorstr,'NSB_ArtifactDetection');
 end
 
+%% Plot Artifacts
+
 if options.plot
-    ArtHeight = 0.4;
-    ts = (1:length(Signal))/options.SampleRate; %seconds
-    
     disp(['NSB_ArtifactDetection - Generating Artifact Plot...']);
-    if length(Signal) > 10000
+    ArtHeight = -DCThresh/2;
+    ts = (1:length(Signal))/options.SampleRate; %seconds  
+
+% new plot version
+if length(Signal) > 10000
         reduceSample = true;
     else
         reduceSample = false;
@@ -328,7 +331,7 @@ if options.plot
     if reduceSample
         ts = ts(1:10:end);
         Signal = Signal(1:10:end);
-        h_plot = plot(ts, (Signal/(max(Signal)*2))+1/2); %scales between [0:1]
+        h_plot = plot(ts, Signal);
         if ts(end) < 60*60  %1 hour
             set(get(h_fig,'CurrentAxes'),'XTick',1:60:ts(end));
             set(get(h_fig,'CurrentAxes'),'XTickLabel',0:1:(length(Signal)/(60*options.SampleRate/10)));
@@ -339,7 +342,7 @@ if options.plot
             xlabel('Hours');
         end
     else
-        h_plot = plot(ts, (Signal/(max(Signal)*2))+1/2); %scales between [0:1]
+        h_plot = plot(ts, Signal); 
         if ts(end) < 60*60  %1 hour
             set(get(h_fig,'CurrentAxes'),'XTick',1:60:ts(end));
             set(get(h_fig,'CurrentAxes'),'XTickLabel',0:1:(length(Signal)/(60*options.SampleRate)));
@@ -351,8 +354,9 @@ if options.plot
         end
     end
     title(options.plotTitle,'FontWeight','bold','Interpreter', 'none');
-    ylabel('Normalized Signal');
+    ylabel('Signal');
     set(get(h_fig,'CurrentAxes'),'XMinorTick','on')
+    set(get(h_fig,'CurrentAxes'),'YLim',[-DCThresh*1.5,DCThresh*1.5]);
     
     %plot(Artifacts,':r');
     if strcmpi(options.algorithm,'full')
@@ -361,71 +365,178 @@ if options.plot
         plot(ts, dvArtifactIndex(1:10:end)*ArtHeight,':g');
         plot(ts, FlatSignalIDX(1:10:end)*ArtHeight,':m');
         plot(ts, EMGArtifactIndex(1:10:end)*ArtHeight,':r');
-        line([1,ts(end)],(DCThresh/(max(Signal)*2)+1/2) * ones(2,1),'Color','k');
-        line([1,ts(end)],(-DCThresh/(max(Signal)*2)+1/2) * ones(2,1),'Color','k');
-        %plot((DCThresh/(max(Signal)*2)+1/2) * ones(length(Signal),1),'k');
-        %plot((-DCThresh/(max(Signal)*2)+1/2)* ones(length(Signal),1),'k');
+        plot(ts, Artifacts(1:10:end)*DCThresh/2,'y');
+        line([1,ts(end)],DCThresh * ones(2,1),'Color','k');
+        line([1,ts(end)],-DCThresh * ones(2,1),'Color','k');
+        
         else
-        plot(ExtremeSignalIDX*ArtHeight,':c');
-        plot(dvArtifactIndex*ArtHeight,':g');
-        plot(FlatSignalIDX*ArtHeight,':m');
-        plot(EMGArtifactIndex*ArtHeight,':r');
-        plot((DCThresh/(max(Signal)*2)+1/2) * ones(length(Signal),1),'k');
-        plot((-DCThresh/(max(Signal)*2)+1/2)* ones(length(Signal),1),'k');
+        plot(ts, ExtremeSignalIDX*ArtHeight,':c');
+        plot(ts, dvArtifactIndex*ArtHeight,':g');
+        plot(ts, FlatSignalIDX*ArtHeight,':m');
+        plot(ts, EMGArtifactIndex*ArtHeight,':r');
+        plot(ts, Artifacts*DCThresh/2,'y');
+        line([1,ts(end)],DCThresh * ones(2,1),'Color','k');
+        line([1,ts(end)],-DCThresh * ones(2,1),'Color','k');
         end
-        legend('Signal','ExtremeArtifact','dvArifact','dropoutArtifact','EMGartifact');
+        legend('Signal','ExtremeArtifact','dvArifact','dropoutArtifact','EMGartifact','Artifacts');
     elseif strcmpi(options.algorithm,'full -EMG')
         if reduceSample
         plot(ts,ExtremeSignalIDX(1:10:end)*ArtHeight,':c');
         plot(ts,dvArtifactIndex(1:10:end)*ArtHeight,':g');
         plot(ts,FlatSignalIDX(1:10:end)*ArtHeight,':m');
-        %plot(EMGArtifactIndex(1:10:end),':r');
-        line([1,ts(end)],(DCThresh/(max(Signal)*2)+1/2) * ones(2,1),'Color','k');
-        line([1,ts(end)],(-DCThresh/(max(Signal)*2)+1/2) * ones(2,1),'Color','k');
-        %plot((DCThresh/(max(Signal)*2)+1/2) * ones(length(Signal),1),'k');
-        %plot((-DCThresh/(max(Signal)*2)+1/2)* ones(length(Signal),1),'k');
+        plot(ts, Artifacts(1:10:end)*DCThresh/2,'y');
+        line([1,ts(end)],DCThresh * ones(2,1),'Color','k');
+        line([1,ts(end)],-DCThresh * ones(2,1),'Color','k');
         else
         plot(ExtremeSignalIDX*ArtHeight,':c');
         plot(dvArtifactIndex*ArtHeight,':g');
         plot(FlatSignalIDX*ArtHeight,':m');
-        %plot(EMGArtifactIndex,':r');
-        plot((DCThresh/(max(Signal)*2)+1/2) * ones(length(Signal),1),'k');
-        plot((-DCThresh/(max(Signal)*2)+1/2)* ones(length(Signal),1),'k');
+        plot(ts, Artifacts*DCThresh/2,'y');
+        line([1,ts(end)],DCThresh * ones(2,1),'Color','k');
+        line([1,ts(end)],-DCThresh * ones(2,1),'Color','k');
+        
         end
-        legend('Signal','ExtremeArtifact','dvArifact','dropoutArtifact','EMGartifact');
+        legend('Signal','ExtremeArtifact','dvArifact','dropoutArtifact','EMGartifact','Artifacts');
         
     elseif strcmpi(options.algorithm,'rms')
-        if reduceSample
-        plot(ts,Artifacts(1:10:end)*ArtHeight,':r');  
-        plot(ts,repmat((rms*options.RMSMultiplier)/(max(Signal)*2)+1/2,1,length(Signal)),':g');
-        plot(ts,repmat((-rms*options.RMSMultiplier)/(max(Signal)*2)+1/2,1,length(Signal)),':g');
+        if reduceSample  
+            plot(ts, Artifacts(1:10:end)*DCThresh/2,'y');
+            line([1,ts(end)],rms*options.RMSMultiplier * ones(2,1),'Color','k');
+            line([1,ts(end)],-rms*options.RMSMultiplier * ones(2,1),'Color','k');      
         else
-        plot(Artifacts*ArtHeight,':r');
-        plot(repmat((rms*options.RMSMultiplier)/(max(Signal)*2)+1/2,1,length(Signal)),':g');
-        plot(repmat((-rms*options.RMSMultiplier)/(max(Signal)*2)+1/2,1,length(Signal)),':g');
+        plot(ts, Artifacts*DCThresh/2,'y');
+        line([1,ts(end)],rms*options.RMSMultiplier * ones(2,1),'Color','k');
+        line([1,ts(end)],-rms*options.RMSMultiplier * ones(2,1),'Color','k');
+        
         end
-        legend('Signal','RMSthreshold','Artifacts');
+        legend('Signal','Artifacts','RMSthreshold');
     else
         if reduceSample
-        plot(ts,Artifacts(1:10:end)*ArtHeight,':r'); 
-        plot(ts,repmat(options.DCvalue/(max(Signal)*2)+1/2,1,length(Signal)),':g');
-        plot(ts,repmat(-options.DCvalue/(max(Signal)*2)+1/2,1,length(Signal)),':g');  
+        plot(ts, Artifacts(1:10:end)*DCThresh/2,'y');
+        line([1,ts(end)],options.DCvalue * ones(2,1),'Color','k');
+        line([1,ts(end)],-options.DCvalue * ones(2,1),'Color','k');
         else
-        plot(Artifacts*ArtHeight,':r');
-        plot(repmat(options.DCvalue/(max(Signal)*2)+1/2,1,length(Signal)),':g');
-        plot(repmat(-options.DCvalue/(max(Signal)*2)+1/2,1,length(Signal)),':g');
+        plot(ts, Artifacts*DCThresh/2,'y');
+        line([1,ts(end)],options.DCvalue * ones(2,1),'Color','k');
+        line([1,ts(end)],-options.DCvalue * ones(2,1),'Color','k');
         end
-        legend('Signal','Artifacts', 'DC value');
+        legend('Signal','DC value','Artifacts');
     end
+%%
+%     if length(Signal) > 10000
+%         reduceSample = true;
+%     else
+%         reduceSample = false;
+%     end
+%     h_fig = figure;hold on;
+%     if reduceSample
+%         ts = ts(1:10:end);
+%         Signal = Signal(1:10:end);
+%         h_plot = plot(ts, (Signal/(max(Signal)*2))+1/2); %scales between [0:1]
+%         if ts(end) < 60*60  %1 hour
+%             set(get(h_fig,'CurrentAxes'),'XTick',1:60:ts(end));
+%             set(get(h_fig,'CurrentAxes'),'XTickLabel',0:1:(length(Signal)/(60*options.SampleRate/10)));
+%             xlabel('Minutes');
+%         else
+%             set(get(h_fig,'CurrentAxes'),'XTick',1:60*60:ts(end));
+%             set(get(h_fig,'CurrentAxes'),'XTickLabel',0:1:(length(Signal)/(60*60*options.SampleRate/10)));
+%             xlabel('Hours');
+%         end
+%     else
+%         h_plot = plot(ts, (Signal/(max(Signal)*2))+1/2); %scales between [0:1]
+%         if ts(end) < 60*60  %1 hour
+%             set(get(h_fig,'CurrentAxes'),'XTick',1:60:ts(end));
+%             set(get(h_fig,'CurrentAxes'),'XTickLabel',0:1:(length(Signal)/(60*options.SampleRate)));
+%             xlabel('Minutes');
+%         else
+%             set(get(h_fig,'CurrentAxes'),'XTick',1:60*60:ts(end));
+%             set(get(h_fig,'CurrentAxes'),'XTickLabel',0:1:(length(Signal)/(60*60*options.SampleRate)));
+%             xlabel('Hours');
+%         end
+%     end
+%     title(options.plotTitle,'FontWeight','bold','Interpreter', 'none');
+%     ylabel('Normalized Signal');
+%     set(get(h_fig,'CurrentAxes'),'XMinorTick','on')
+%     
+%     %plot(Artifacts,':r');
+%     if strcmpi(options.algorithm,'full')
+%         if reduceSample
+%         plot(ts, ExtremeSignalIDX(1:10:end)*ArtHeight,':c');
+%         plot(ts, dvArtifactIndex(1:10:end)*ArtHeight,':g');
+%         plot(ts, FlatSignalIDX(1:10:end)*ArtHeight,':m');
+%         plot(ts, EMGArtifactIndex(1:10:end)*ArtHeight,':r');
+%         line([1,ts(end)],(DCThresh/(max(Signal)*2)+1/2) * ones(2,1),'Color','k');
+%         line([1,ts(end)],(-DCThresh/(max(Signal)*2)+1/2) * ones(2,1),'Color','k');
+%         %plot((DCThresh/(max(Signal)*2)+1/2) * ones(length(Signal),1),'k');
+%         %plot((-DCThresh/(max(Signal)*2)+1/2)* ones(length(Signal),1),'k');
+%         else
+%         plot(ts, ExtremeSignalIDX*ArtHeight,':c');
+%         plot(ts, dvArtifactIndex*ArtHeight,':g');
+%         plot(ts, FlatSignalIDX*ArtHeight,':m');
+%         plot(ts, EMGArtifactIndex*ArtHeight,':r');
+%         line([1,ts(end)],(DCThresh/(max(Signal)*2)+1/2) * ones(2,1),'Color','k');
+%         line([1,ts(end)],(-DCThresh/(max(Signal)*2)+1/2) * ones(2,1),'Color','k');
+%         end
+%         legend('Signal','ExtremeArtifact','dvArifact','dropoutArtifact','EMGartifact');
+%     elseif strcmpi(options.algorithm,'full -EMG')
+%         if reduceSample
+%         plot(ts,ExtremeSignalIDX(1:10:end)*ArtHeight,':c');
+%         plot(ts,dvArtifactIndex(1:10:end)*ArtHeight,':g');
+%         plot(ts,FlatSignalIDX(1:10:end)*ArtHeight,':m');
+%         %plot(EMGArtifactIndex(1:10:end),':r');
+%         line([1,ts(end)],(DCThresh/(max(Signal)*2)+1/2) * ones(2,1),'Color','k');
+%         line([1,ts(end)],(-DCThresh/(max(Signal)*2)+1/2) * ones(2,1),'Color','k');
+%         %plot((DCThresh/(max(Signal)*2)+1/2) * ones(length(Signal),1),'k');
+%         %plot((-DCThresh/(max(Signal)*2)+1/2)* ones(length(Signal),1),'k');
+%         else
+%         plot(ExtremeSignalIDX*ArtHeight,':c');
+%         plot(dvArtifactIndex*ArtHeight,':g');
+%         plot(FlatSignalIDX*ArtHeight,':m');
+%         %plot(EMGArtifactIndex,':r');
+%         plot((DCThresh/(max(Signal)*2)+1/2) * ones(length(Signal),1),'k');
+%         plot((-DCThresh/(max(Signal)*2)+1/2)* ones(length(Signal),1),'k');
+%         end
+%         legend('Signal','ExtremeArtifact','dvArifact','dropoutArtifact','EMGartifact');
+%         
+%     elseif strcmpi(options.algorithm,'rms')
+%         if reduceSample
+%         plot(ts,Artifacts(1:10:end)*ArtHeight,':r');  
+%         plot(ts,repmat((rms*options.RMSMultiplier)/(max(Signal)*2)+1/2,1,length(Signal)),':g');
+%         plot(ts,repmat((-rms*options.RMSMultiplier)/(max(Signal)*2)+1/2,1,length(Signal)),':g');
+%         else
+%         plot(Artifacts*ArtHeight,':r');
+%         plot(repmat((rms*options.RMSMultiplier)/(max(Signal)*2)+1/2,1,length(Signal)),':g');
+%         plot(repmat((-rms*options.RMSMultiplier)/(max(Signal)*2)+1/2,1,length(Signal)),':g');
+%         end
+%         legend('Signal','RMSthreshold','Artifacts');
+%     else
+%         if reduceSample
+%         plot(ts,Artifacts(1:10:end)*ArtHeight,':r'); 
+%         plot(ts,repmat(options.DCvalue/(max(Signal)*2)+1/2,1,length(Signal)),':g');
+%         plot(ts,repmat(-options.DCvalue/(max(Signal)*2)+1/2,1,length(Signal)),':g');  
+%         else
+%         plot(Artifacts*ArtHeight,':r');
+%         plot(repmat(options.DCvalue/(max(Signal)*2)+1/2,1,length(Signal)),':g');
+%         plot(repmat(-options.DCvalue/(max(Signal)*2)+1/2,1,length(Signal)),':g');
+%         end
+%         legend('Signal','Artifacts', 'DC value');
+%     end
     if ~isempty(options.logfile)
         [logpath, trash1, trash2] = fileparts(options.logfile);
     else
         logpath = cd;
     end    
     disp(['NSB_ArtifactDetection - Saving Artifact Plot...']);
-        %hgsave(h_fig, fullfile(logpath,['ArtifactFig_',num2str(now),'.fig']), '-v7.3');
-        print(h_fig,'-dpdf', fullfile(logpath,['ArtifactFig_',num2str(now),'.pdf']) );
-        close(h_fig);
+
+% Better naming
+[~,filename,~] = fileparts(options.plotTitle{1});
+filename = ['ArtifactFig_',filename,'_',options.plotTitle{2},'_',num2str(now)];
+
+%Debugging    
+%hgsave(h_fig, fullfile(logpath,[filename,'.fig']), '-v7.3');
+
+print(h_fig,'-dpdf', fullfile(logpath,[filename,'.pdf']) );
+close(h_fig);
 end
 
 % Artifacts is a logical array.  Now we have to have it become a Start-Stop array.

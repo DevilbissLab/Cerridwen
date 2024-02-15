@@ -146,7 +146,7 @@ if options.SPToolbox && ~strcmpi(options.SPTmethod,'FFT')
     CIHi = NaN(length(validBins),length(FinalFreqs));
 
     switch lower(options.SPTmethod)
-        case 'mtm'
+        case {'mtm','thompson'}
             obj = spectrum.mtm(options.TimeBW);
         case 'welch'
             %setup within bin windowing   

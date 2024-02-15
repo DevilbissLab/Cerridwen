@@ -666,9 +666,11 @@ if ischar(xmlpath)
         handles.AnalysisStruct.isloadedGlobalParameterFile = true;
         set(handles.AnalysisParameters_txt, 'String', NewFile);
 
-
         status = NSB_UpdateStatusWindow(handles, 'User Parameter File...', 'PreclinicalFramework');
         status = NSB_UpdateStatusWindow(handles, NewFile, 'PreclinicalFramework');
+        if ~isempty(msg)
+        NSBlog(handles.parameters.PreClinicalFramework.LogFile,['Parameters File Merging...: ',msg]);
+        end
 % 
 %         rows = rows+1;
 %         txt{rows,1} = 'User Parameter File...';
