@@ -16,3 +16,5 @@ CommonFiles/NSB_genDSIlicFile.m
 Cerridwen_SoftwareLicences/
 
 *.asv
+
+ExternalToolBoxes/infodynamics_xl/

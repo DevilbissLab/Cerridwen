@@ -70,6 +70,7 @@ function parms = NSB_ParameterFile()
 % April 27 2021 ver 3.01 Small bug fixes with figure naming and file naming
 % June 14 2022 ver 3.02 Fixed LIMS issue with file specific parameters
 % Feb 13 2024 ver 3.10 Forcing signal detrend before artifact detection. Started to cleanup code and parameter handling.
+% April 15 2025 ver 3.2x adding JIDT toolbox for connectivity analysis
 %
 %
 % NSB Data Format
@@ -116,7 +117,7 @@ parms.DataSpider.HIPAA.ShredPartial = true;
 
 %% PreclinicalFramework Parameters 
 parms.PreClinicalFramework.Name = 'Cerridwen EEG Framework';
-parms.PreClinicalFramework.Version = 'v.3.10';
+parms.PreClinicalFramework.Version = 'v.3.20';
 parms.PreClinicalFramework.MatlabVersion = version;
 parms.PreClinicalFramework.HomeDir = cd; %Where is this exe (or working dir) located
 if isdeployed
@@ -286,7 +287,22 @@ parms.PreClinicalFramework.Scoring.GMMinit.PComponents = [0.235582791083435,0.14
 % GMM end point
 parms.PreClinicalFramework.Scoring.GMMclust = [0.00812009526019139,0.0116251246161410,0.0107005973439480,0.00642379351659442,0.00248666219147668,0.000909618995051502,0.000347570749139938,8.22293693144029e-05,2.78707749365036e-05;0.00609425588594097,0.00837007337968675,0.00736420061759011,0.00503299529104573,0.00262960863924286,0.00142115868405853,0.000520439275225559,0.000123448049611899,3.35926228938710e-05;0.00388239903392241,0.00549942558751268,0.00526923196027110,0.00370482741349266,0.00184319537069624,0.000589332117020189,0.000242618622361572,7.83648706786513e-05,2.74784534048178e-05;0.00302265928862588,0.00382732636834386,0.00282730203741678,0.00142570071172277,0.000824317086962886,0.000554314278975743,0.000292771847839603,8.18324925891467e-05,3.03697448524823e-05;0.00142194216410385,0.00152793022913160,0.00120679155733946,0.000763746178368655,0.000443906801604746,0.000224456547831827,0.000127254040425521,7.15534909763699e-05,3.30384286088583e-05;];
 
-%Licences contained
+%Connectivity analysis
+parms.PreClinicalFramework.Connectivity.doActiveInfoStorage = false;
+parms.PreClinicalFramework.Connectivity.doTransferEntropy = false;
+parms.PreClinicalFramework.Connectivity.JIDT.UnivariateAnalysis = true;
+parms.PreClinicalFramework.Connectivity.JIDT.calcType = 'ksg';
+parms.PreClinicalFramework.Connectivity.JIDT.calculator = 'EntropyRateCalculator';
+parms.PreClinicalFramework.Connectivity.JIDT.k_history = 1; % [numeric]
+parms.PreClinicalFramework.Connectivity.JIDT.tau = 1;
+parms.PreClinicalFramework.Connectivity.JIDT.AutoEmbedding = 'max_corr_AIS'; % {'none', 'ragwitz', 'max_corr_AIS'} automatically sets k_history
+parms.PreClinicalFramework.Connectivity.JIDT.k_search_max = 10; %10 time steps
+parms.PreClinicalFramework.Connectivity.JIDT.tau_search_max = 1;
+parms.PreClinicalFramework.Connectivity.JIDT.ragwitz_NNS = 4; %use 4+ 
+parms.PreClinicalFramework.Connectivity.JIDT.normalize = true;
+parms.PreClinicalFramework.Connectivity.JIDT.numSurrogates = 1000;
+
+%% Licences contained
 %1) fuf()
 % Copyright (c) 2002, Francesco di Pierro
 % All rights reserved.

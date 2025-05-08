@@ -162,7 +162,7 @@ plot(handles.SpectralPlot,F,Pyy);
 %set max displayed Freq
 set(handles.maxSpectFreq_txt,'String',num2str(F(end)));
 
-%Setup FFT Frequencu Bins
+%Setup FFT Frequency Bins
 SpectralAnalysisParms.Freqs = 0:SpectralAnalysisParms.FinalFreqResolution:ChannelStruct.Hz/2;
 
 %setup Sliders
@@ -233,6 +233,7 @@ try, delete(handles.Heatmap.HeatMapFigure); end
 delete(handles.MainFigure);
 drawnow();
 
+%%%%%%%%%%%%%%%%%%%%%%%Done main section%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function HzSlider_callback(hObject,eventdata)
 handles = guidata(gcbo);
 NumAsStr = num2str(get(hObject,'Value'),'%4.1f');
@@ -718,6 +719,7 @@ function draggingFcn(varargin)
 handles = guidata(gcbo);
 curPoint = get(handles.TimePlot, 'CurrentPoint');
 set(handles.ArtifactThreshLine,'YData',curPoint(1,2)*[1 1]);
+% debug % disp(['Current Threshold = ', num2str(curPoint(1,2))]);
 
 function StartHorzDragFcn(hObject, eventdata, handles)
 %gets passed h_ArtifactThreshLine
@@ -775,57 +777,124 @@ SysStatus = get(handles.MainFigure,'UserData');
 %Get plot data
 plotChildren = get(handles.TimePlot,'Children');
 Signal = get(plotChildren(~(plotChildren == handles.ArtifactThreshLine)),'YData');
-switch upper(ArtDetStruct.algorithm)
-    case 'RMS'
-        rms = sqrt(mean(Signal.^2));
-        curThresh =get(handles.ArtifactThreshLine,'YData');
-        ArtDetStruct.RMSMultiplier = curThresh(1)/rms;
-    case 'DC'
-        curThresh =get(handles.ArtifactThreshLine,'YData');
-        ArtDetStruct.DCvalue = curThresh(1);
-    case {'FULL','FULL -EMG'}
-        switch lower(ArtDetStruct.full.DCcalculation)
-            case 'scaled'
-                curThresh =get(handles.ArtifactThreshLine,'YData');
-                rms = sqrt(mean(Signal.^2));
-                IDX = (Signal > rms*ArtDetStruct.RMSMultiplier) | ...
-                        (Signal < -rms*ArtDetStruct.RMSMultiplier);
-                nanSignal = Signal;
-                nanSignal(IDX) = NaN;    
-                SigBuff = buffer(abs(nanSignal),double(round(ArtDetStruct.SampleRate/2)));% buffer will fail if data is empty
-                clear nanSignal;
-                BuffMax = max(SigBuff);
-                clear SigBuff;
-                % Deal with edge case where all signal is flat (2 values) and
-                % (max(BuffMax)-min(BuffMax)) == 0
-                if (max(BuffMax)-min(BuffMax)) ~= 0
-                    ArtDetStruct.full.STDMultiplier = curThresh(1)/(max(BuffMax)-min(BuffMax));
-                else
-                    %Throw a warning and set DCcalcualtion to DC
-                    ArtDetStruct.full.DCcalculation = 'DC';
-                    curThresh = get(handles.ArtifactThreshLine,'YData');
-                    ArtDetStruct.full.DCvalue = curThresh(1);
-                    errorstr = ['Warning: DynamicParameterGUI >> Could not calculate "scaled" artifact threshold. Using "DC" threshold'];
-                    if ~isempty(SpectAnalStruct.logfile)
-                        NSBlog(SpectAnalStruct.logfile,errorstr);
-                    else
-                        errordlg(errorstr,'DynamicParameterGUI');
-                    end
-                end
 
-%                 if Threshold < min(BuffMax)*2  %deal with sig's with no artifact
-%                     ArtDetStruct.full.STDMultiplier = get(handles.ArtifactThreshLine,'YData');
-%                 else
-%                     ArtDetStruct.full.STDMultiplier = curThresh(1)/(max(BuffMax)-min(BuffMax));
-%                 end
-            otherwise %use DC thresh
-                curThresh = get(handles.ArtifactThreshLine,'YData');
-                ArtDetStruct.full.DCvalue = curThresh(1);
-        end
-    otherwise
-        curThresh =get(handles.ArtifactThreshLine,'YData');
-        ArtDetStruct.DCvalue = curThresh(1);
+% Save all calculated values to XML
+curThresh =get(handles.ArtifactThreshLine,'YData');
+% case 'RMS'
+rms = sqrt(mean(Signal.^2));
+ArtDetStruct.RMSMultiplier = curThresh(1)/rms;
+% case 'DC'
+ArtDetStruct.DCvalue = curThresh(1);
+ArtDetStruct.full.DCvalue = curThresh(1);
+% case {'FULL','FULL -EMG'}
+IDX = (Signal > rms*ArtDetStruct.RMSMultiplier) | ...
+    (Signal < -rms*ArtDetStruct.RMSMultiplier);
+nanSignal = Signal;
+nanSignal(IDX) = NaN;
+SigBuff = buffer(abs(nanSignal),double(round(ArtDetStruct.SampleRate/2)));% buffer will fail if data is empty
+clear nanSignal;
+BuffMax = max(SigBuff);
+clear SigBuff;
+if (max(BuffMax)-min(BuffMax)) ~= 0
+    ArtDetStruct.full.STDMultiplier = curThresh(1)/(max(BuffMax)-min(BuffMax));
+else
+    %Throw a warning and set DCcalcualtion to DC
+    ArtDetStruct.full.DCcalculation = 'DC';
+    errorstr = ['Warning: DynamicParameterGUI >> Could not calculate "scaled" artifact threshold. Using "DC" threshold'];
+    if ~isempty(SpectAnalStruct.logfile)
+        NSBlog(SpectAnalStruct.logfile,errorstr);
+    else
+        errordlg(errorstr,'DynamicParameterGUI');
+    end
 end
+errorstr = ['Info: DynamicParameterGUI >> Final Artifact Threshold = ', num2str(curThresh(1))];
+disp(errorstr);
+if ~isempty(SpectAnalStruct.logfile)
+     NSBlog(SpectAnalStruct.logfile,errorstr);
+end
+% 
+% switch upper(ArtDetStruct.algorithm)
+%     case 'RMS'
+%         rms = sqrt(mean(Signal.^2));
+%         curThresh =get(handles.ArtifactThreshLine,'YData');
+%         ArtDetStruct.RMSMultiplier = curThresh(1)/rms;
+%         errorstr = ['Info: DynamicParameterGUI >> RMSMultiplier = ', num2str(ArtDetStruct.RMSMultiplier)];
+%         disp(errorstr);
+%         if ~isempty(SpectAnalStruct.logfile)
+%             NSBlog(SpectAnalStruct.logfile,errorstr);
+%         end
+%     case 'DC'
+%         curThresh =get(handles.ArtifactThreshLine,'YData');
+%         ArtDetStruct.DCvalue = curThresh(1);
+%         errorstr = ['Info: DynamicParameterGUI >> DCvalue = ', num2str(ArtDetStruct.DCvalue)];
+%         disp(errorstr);
+%         if ~isempty(SpectAnalStruct.logfile)
+%             NSBlog(SpectAnalStruct.logfile,errorstr);
+%         end
+%     case {'FULL','FULL -EMG'}
+%         switch lower(ArtDetStruct.full.DCcalculation)
+%             case 'scaled'
+%                 curThresh =get(handles.ArtifactThreshLine,'YData');
+%                 rms = sqrt(mean(Signal.^2));
+%                 IDX = (Signal > rms*ArtDetStruct.RMSMultiplier) | ...
+%                     (Signal < -rms*ArtDetStruct.RMSMultiplier);
+%                 nanSignal = Signal;
+%                 nanSignal(IDX) = NaN;
+%                 SigBuff = buffer(abs(nanSignal),double(round(ArtDetStruct.SampleRate/2)));% buffer will fail if data is empty
+%                 clear nanSignal;
+%                 BuffMax = max(SigBuff);
+%                 clear SigBuff;
+%                 % Deal with edge case where all signal is flat (2 values) and
+%                 % (max(BuffMax)-min(BuffMax)) == 0
+%                 if (max(BuffMax)-min(BuffMax)) ~= 0
+%                     ArtDetStruct.full.STDMultiplier = curThresh(1)/(max(BuffMax)-min(BuffMax));
+%                     errorstr = ['Info: DynamicParameterGUI >> Full_Scaled = ', num2str(ArtDetStruct.full.STDMultiplier)];
+%                     disp(errorstr);
+%                     if ~isempty(SpectAnalStruct.logfile)
+%                         NSBlog(SpectAnalStruct.logfile,errorstr);
+%                     end
+%                 else
+%                     %Throw a warning and set DCcalcualtion to DC
+%                     ArtDetStruct.full.DCcalculation = 'DC';
+%                     curThresh = get(handles.ArtifactThreshLine,'YData');
+%                     ArtDetStruct.full.DCvalue = curThresh(1);
+%                     errorstr = ['Warning: DynamicParameterGUI >> Could not calculate "scaled" artifact threshold. Using "DC" threshold'];
+%                     if ~isempty(SpectAnalStruct.logfile)
+%                         NSBlog(SpectAnalStruct.logfile,errorstr);
+%                     else
+%                         errordlg(errorstr,'DynamicParameterGUI');
+%                     end
+%                     errorstr = ['Info: DynamicParameterGUI >> Full_DC = ', num2str(ArtDetStruct.full.DCvalue)];
+%                     disp(errorstr);
+%                     if ~isempty(SpectAnalStruct.logfile)
+%                         NSBlog(SpectAnalStruct.logfile,errorstr);
+%                     end
+%                 end
+% 
+%                 %                 if Threshold < min(BuffMax)*2  %deal with sig's with no artifact
+%                 %                     ArtDetStruct.full.STDMultiplier = get(handles.ArtifactThreshLine,'YData');
+%                 %                 else
+%                 %                     ArtDetStruct.full.STDMultiplier = curThresh(1)/(max(BuffMax)-min(BuffMax));
+%                 %                 end
+%             otherwise %use DC thresh
+%                 curThresh = get(handles.ArtifactThreshLine,'YData');
+%                 ArtDetStruct.full.DCvalue = curThresh(1);
+%                 errorstr = ['Info: DynamicParameterGUI >> Full_DC = ', num2str(ArtDetStruct.full.DCvalue)];
+%                 disp(errorstr);
+%                 if ~isempty(SpectAnalStruct.logfile)
+%                     NSBlog(SpectAnalStruct.logfile,errorstr);
+%                 end
+%         end
+%     otherwise
+%         curThresh =get(handles.ArtifactThreshLine,'YData');
+%         ArtDetStruct.DCvalue = curThresh(1);
+%         errorstr = ['Info: DynamicParameterGUI >> DCvalue = ', num2str(ArtDetStruct.DCvalue)];
+%         disp(errorstr);
+%         if ~isempty(SpectAnalStruct.logfile)
+%             NSBlog(SpectAnalStruct.logfile,errorstr);
+%         end
+% end
+
 % %Update with GUI params (Spectral Struct)
 SpectAnalStruct.FinalFreqResolution = str2double(get(handles.HzSet_txt,'String'));
 SpectAnalStruct.FinalTimeResolution = str2double(get(handles.timebinSet_txt,'String'));
@@ -895,57 +964,131 @@ SpectAnalStruct = SpectPlotStruct.SpectralAnalysisParms;
 %Get plot data
 plotChildren = get(handles.TimePlot,'Children');
 Signal = get(plotChildren(~(plotChildren == handles.ArtifactThreshLine)),'YData');
-switch upper(ArtDetStruct.algorithm)
-    case 'RMS'
-        rms = sqrt(mean(Signal.^2));
-        curThresh =get(handles.ArtifactThreshLine,'YData');
-        ArtDetStruct.RMSMultiplier = curThresh(1)/rms;
-    case 'DC'
-        curThresh =get(handles.ArtifactThreshLine,'YData');
-        ArtDetStruct.DCvalue = curThresh(1);
-    case 'FULL'
-        switch lower(ArtDetStruct.full.DCcalculation)
-             case 'scaled'
-%                 curThresh =get(handles.ArtifactThreshLine,'YData');
-%                 SigBuff = buffer(abs(Signal),double(round(ArtDetStruct.SampleRate/2)));% buffer will fail if data is empty
-%                 BuffMax = max(SigBuff);
-%                 ArtDetStruct.full.STDMultiplier = curThresh(1)/(max(BuffMax)-min(BuffMax));
 
-                curThresh =get(handles.ArtifactThreshLine,'YData');
-                rms = sqrt(mean(Signal.^2));
-                IDX = (Signal > rms*ArtDetStruct.RMSMultiplier) | ...
-                        (Signal < -rms*ArtDetStruct.RMSMultiplier);
-                nanSignal = Signal;
-                nanSignal(IDX) = NaN;    
-                SigBuff = buffer(abs(nanSignal),double(round(ArtDetStruct.SampleRate/2)));% buffer will fail if data is empty
-                clear nanSignal;
-                BuffMax = max(SigBuff);
-                clear SigBuff;
-                % Deal with edge case where all signal is flat (2 values) and
-                % (max(BuffMax)-min(BuffMax)) == 0
-                if (max(BuffMax)-min(BuffMax)) ~= 0
-                    ArtDetStruct.full.STDMultiplier = curThresh(1)/(max(BuffMax)-min(BuffMax));
-                else
-                    %Throw a warning and set DCcalcualtion to DC
-                    ArtDetStruct.full.DCcalculation = 'DC';
-                    curThresh = get(handles.ArtifactThreshLine,'YData');
-                    ArtDetStruct.full.DCvalue = curThresh(1);
-                    errorstr = ['Warning: DynamicParameterGUI >> Could not calculate "scaled" artifact threshold. Using "DC" threshold'];
-                    if ~isempty(SpectAnalStruct.logfile)
-                        NSBlog(SpectAnalStruct.logfile,errorstr);
-                    else
-                        errordlg(errorstr,'DynamicParameterGUI');
-                    end
-                end
-
-            otherwise %use DC thresh
-                curThresh = get(handles.ArtifactThreshLine,'YData');
-                ArtDetStruct.full.DCvalue = curThresh(1);
-        end
-    otherwise
-        curThresh =get(handles.ArtifactThreshLine,'YData');
-        ArtDetStruct.DCvalue = curThresh(1);
+% Save all calculated values to XML
+curThresh =get(handles.ArtifactThreshLine,'YData');
+% case 'RMS'
+rms = sqrt(mean(Signal.^2));
+ArtDetStruct.RMSMultiplier = curThresh(1)/rms;
+% case 'DC'
+ArtDetStruct.DCvalue = curThresh(1);
+ArtDetStruct.full.DCvalue = curThresh(1);
+% case {'FULL','FULL -EMG'}
+IDX = (Signal > rms*ArtDetStruct.RMSMultiplier) | ...
+    (Signal < -rms*ArtDetStruct.RMSMultiplier);
+nanSignal = Signal;
+nanSignal(IDX) = NaN;
+SigBuff = buffer(abs(nanSignal),double(round(ArtDetStruct.SampleRate/2)));% buffer will fail if data is empty
+clear nanSignal;
+BuffMax = max(SigBuff);
+clear SigBuff;
+if (max(BuffMax)-min(BuffMax)) ~= 0
+    ArtDetStruct.full.STDMultiplier = curThresh(1)/(max(BuffMax)-min(BuffMax));
+else
+    %Throw a warning and set DCcalcualtion to DC
+    ArtDetStruct.full.DCcalculation = 'DC';
+    errorstr = ['Warning: DynamicParameterGUI >> Could not calculate "scaled" artifact threshold. Using "DC" threshold'];
+    if ~isempty(SpectAnalStruct.logfile)
+        NSBlog(SpectAnalStruct.logfile,errorstr);
+    else
+        errordlg(errorstr,'DynamicParameterGUI');
+    end
 end
+errorstr = ['Info: DynamicParameterGUI >> Final Artifact Threshold = ', num2str(curThresh(1))];
+disp(errorstr);
+if ~isempty(SpectAnalStruct.logfile)
+     NSBlog(SpectAnalStruct.logfile,errorstr);
+end
+% 
+% 
+% curThresh =get(handles.ArtifactThreshLine,'YData');
+% errorstr = ['Info: DynamicParameterGUI >> Final Artifact Threshold = ', num2str(curThresh)];
+% disp(errorstr);
+% if ~isempty(SpectAnalStruct.logfile)
+%      NSBlog(SpectAnalStruct.logfile,errorstr);
+% end
+% switch upper(ArtDetStruct.algorithm)
+%     case 'RMS'
+%         rms = sqrt(mean(Signal.^2));
+%         curThresh =get(handles.ArtifactThreshLine,'YData');
+%         ArtDetStruct.RMSMultiplier = curThresh(1)/rms;
+%         errorstr = ['Info: DynamicParameterGUI >> RMSMultiplier = ', num2str(ArtDetStruct.RMSMultiplier)];
+%         disp(errorstr);
+%         if ~isempty(SpectAnalStruct.logfile)
+%             NSBlog(SpectAnalStruct.logfile,errorstr);
+%         end
+%     case 'DC'
+%         curThresh =get(handles.ArtifactThreshLine,'YData');
+%         ArtDetStruct.DCvalue = curThresh(1);
+%         errorstr = ['Info: DynamicParameterGUI >> DCvalue = ', num2str(ArtDetStruct.DCvalue)];
+%         disp(errorstr);
+%         if ~isempty(SpectAnalStruct.logfile)
+%             NSBlog(SpectAnalStruct.logfile,errorstr);
+%         end
+%     case 'FULL'
+%         switch lower(ArtDetStruct.full.DCcalculation)
+%              case 'scaled'
+% %                 curThresh =get(handles.ArtifactThreshLine,'YData');
+% %                 SigBuff = buffer(abs(Signal),double(round(ArtDetStruct.SampleRate/2)));% buffer will fail if data is empty
+% %                 BuffMax = max(SigBuff);
+% %                 ArtDetStruct.full.STDMultiplier = curThresh(1)/(max(BuffMax)-min(BuffMax));
+% 
+%                 curThresh =get(handles.ArtifactThreshLine,'YData');
+%                 rms = sqrt(mean(Signal.^2));
+%                 IDX = (Signal > rms*ArtDetStruct.RMSMultiplier) | ...
+%                         (Signal < -rms*ArtDetStruct.RMSMultiplier);
+%                 nanSignal = Signal;
+%                 nanSignal(IDX) = NaN;    
+%                 SigBuff = buffer(abs(nanSignal),double(round(ArtDetStruct.SampleRate/2)));% buffer will fail if data is empty
+%                 clear nanSignal;
+%                 BuffMax = max(SigBuff);
+%                 clear SigBuff;
+%                 % Deal with edge case where all signal is flat (2 values) and
+%                 % (max(BuffMax)-min(BuffMax)) == 0
+%                 if (max(BuffMax)-min(BuffMax)) ~= 0
+%                     ArtDetStruct.full.STDMultiplier = curThresh(1)/(max(BuffMax)-min(BuffMax));
+%                     errorstr = ['Info: DynamicParameterGUI >> Full_Scaled = ', num2str(ArtDetStruct.full.STDMultiplier)];
+%                     disp(errorstr);
+%                     if ~isempty(SpectAnalStruct.logfile)
+%                         NSBlog(SpectAnalStruct.logfile,errorstr);
+%                     end
+%                 else
+%                     %Throw a warning and set DCcalcualtion to DC
+%                     ArtDetStruct.full.DCcalculation = 'DC';
+%                     curThresh = get(handles.ArtifactThreshLine,'YData');
+%                     ArtDetStruct.full.DCvalue = curThresh(1);
+%                     errorstr = ['Warning: DynamicParameterGUI >> Could not calculate "scaled" artifact threshold. Using "DC" threshold'];
+%                     if ~isempty(SpectAnalStruct.logfile)
+%                         NSBlog(SpectAnalStruct.logfile,errorstr);
+%                     else
+%                         errordlg(errorstr,'DynamicParameterGUI');
+%                     end
+%                     errorstr = ['Info: DynamicParameterGUI >> Full_DC = ', num2str(ArtDetStruct.full.DCvalue)];
+%                     disp(errorstr);
+%                     if ~isempty(SpectAnalStruct.logfile)
+%                         NSBlog(SpectAnalStruct.logfile,errorstr);
+%                     end
+%                 end
+% 
+%             otherwise %use DC thresh
+%                 curThresh = get(handles.ArtifactThreshLine,'YData');
+%                 ArtDetStruct.full.DCvalue = curThresh(1);
+%                 errorstr = ['Info: DynamicParameterGUI >> Full_DC = ', num2str(ArtDetStruct.full.DCvalue)];
+%                 disp(errorstr);
+%                 if ~isempty(SpectAnalStruct.logfile)
+%                     NSBlog(SpectAnalStruct.logfile,errorstr);
+%                 end
+%         end
+%     otherwise
+%         curThresh =get(handles.ArtifactThreshLine,'YData');
+%         ArtDetStruct.DCvalue = curThresh(1);
+%         errorstr = ['Info: DynamicParameterGUI >> DCvalue = ', num2str(ArtDetStruct.DCvalue)];
+%         disp(errorstr);
+%         if ~isempty(SpectAnalStruct.logfile)
+%             NSBlog(SpectAnalStruct.logfile,errorstr);
+%         end
+% end
+
 % %Update with GUI params (Spectral Struct)
 SpectAnalStruct.FinalFreqResolution = str2double(get(handles.HzSet_txt,'String'));
 SpectAnalStruct.FinalTimeResolution = str2double(get(handles.timebinSet_txt,'String'));
@@ -978,7 +1121,7 @@ guidata(gcbo, handles);
 uiresume(handles.MainFigure);
 %delete(handles.MainFigure);
 
-function Threshold = getArtifactThresh(ArtifactDetectionParms,Signal,units)
+function Threshold = getArtifactThresh(ArtifactDetectionParms,Signal,units) %calaulate plotted threshold
 switch upper(ArtifactDetectionParms.algorithm)
     case 'RMS'
         rms = sqrt(mean(Signal.^2));
@@ -994,7 +1137,9 @@ switch upper(ArtifactDetectionParms.algorithm)
     case {'FULL','FULL -EMG'}
         switch lower(ArtifactDetectionParms.full.DCcalculation)
             case 'scaled'
-                rms = sqrt(mean(Signal.^2));
+                %rms = sqrt(mean(Signal.^2));            %<< This uses differnt calculation than final Art Det. There only  
+                NaNIDX = find(~isnan(Signal));
+                rms = sqrt(mean(Signal(NaNIDX).*Signal(NaNIDX)));
                 IDX = (Signal > rms*ArtifactDetectionParms.RMSMultiplier) | ...
                         (Signal < -rms*ArtifactDetectionParms.RMSMultiplier);
                 nanSignal = Signal;
@@ -1016,7 +1161,7 @@ switch upper(ArtifactDetectionParms.algorithm)
              Threshold = ArtifactDetectionParms.DCvalue;
 end
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [h1, handles] = GenerateGUI(DataStr)
 %
 BandRatioCell = {  'Band 1'; 'Band 2'; 'Band 3'; 'Band 4'; 'Band 5' };
@@ -1028,7 +1173,7 @@ h1 = figure(...
 'Name','Parameter Interface GUI',...
 'PaperPosition',get(0,'defaultfigurePaperPosition'),...
 'Position',[727 154 807 820],...
-'Resize','off',...
+'Resize','on',...
 'Tag','MainFigure',...
 'Visible','on');
 

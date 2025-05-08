@@ -26,7 +26,7 @@ function varargout = PreclinicalEEGFramework(varargin)
 
 % Edit the above text to modify the response to help PreclinicalEEGFramework
 
-% Last Modified by GUIDE v2.5 26-Jul-2017 08:59:03
+% Last Modified by GUIDE v2.5 16-Apr-2025 22:25:19
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -91,6 +91,8 @@ handles.AnalysisStruct.doSomnogram = get(handles.doSomnogram_chk,'Value');
 handles.AnalysisStruct.doWriteEDF = get(handles.genEDF_chk,'Value');
 handles.AnalysisStruct.doStatsTable = get(handles.genStatsTable_chk,'Value');
 handles.AnalysisStruct.doSeizureAnalysis = get(handles.doSeizure_chk,'Value');
+handles.AnalysisStruct.doActiveInfoStorage = get(handles.doAIC_chk,'Value');
+handles.AnalysisStruct.doTransferEntropy = get(handles.doTE_chk,'Value');
 
 handles.AnalysisStruct.useDefaultAnalysisParameters = true;
 set(handles.default_rad,'Value',true)
@@ -1175,3 +1177,21 @@ function DetailedLog_menu_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 web(handles.parameters.PreClinicalFramework.LogFile,'-browser');
+
+
+% --- Executes on button press in doAIC_chk.
+function doAIC_chk_Callback(hObject, eventdata, handles)
+% hObject    handle to doAIC_chk (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+handles.AnalysisStruct.doActiveInfoStorage = get(hObject,'Value');
+guidata(hObject, handles);
+
+
+% --- Executes on button press in doTE_chk.
+function doTE_chk_Callback(hObject, eventdata, handles)
+% hObject    handle to doTE_chk (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+handles.AnalysisStruct.doTransferEntropy = get(hObject,'Value');
+guidata(hObject, handles);

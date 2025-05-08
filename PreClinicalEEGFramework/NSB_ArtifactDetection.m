@@ -123,29 +123,44 @@ switch upper(options.algorithm)
         rms = sqrt(mean(Signal(NaNIDX).*Signal(NaNIDX)));
         Artifacts = (Signal > rms*options.RMSMultiplier) | ...
             (Signal < -rms*options.RMSMultiplier);
-        
+
+        errorstr = ['Info: NSB_ArtifactDetection:RMS Detection - RMSMultiplier = ',options.RMSMultiplier, '(',rms*options.RMSMultiplier,' mV)'];
+        if ~isempty(options.logfile)
+           NSBlog(options.logfile,errorstr);
+        end
+
     case 'DC'
         %% determine the positions where signal is above DC Threshold
         Artifacts = (Signal > options.DCvalue) | ...
             (Signal < -options.DCvalue);
+
+        errorstr = ['Info: NSB_ArtifactDetection:DC Detection - DCvalue = ',options.DCvalue, '(mV)'];
+        if ~isempty(options.logfile)
+           NSBlog(options.logfile,errorstr);
+        end
+
     case {'FULL','FULL -EMG'}
         %% determine the positions where signal is above DC Threshold
         %get indicies of extreme values
         try
             switch lower(options.full.DCcalculation)
                 case 'scaled'
-                    %find RMS of data
+                    %find RMS of valid data (isNAN)
                     NaNIDX = find(~isnan(Signal));
                     rms = sqrt(mean(Signal(NaNIDX).*Signal(NaNIDX)));
+                    %step 1 - remove 'bad' data <> of RMS * multiplier
                     IDX = (Signal > rms*options.RMSMultiplier) | ...
                         (Signal < -rms*options.RMSMultiplier);
                     nanSignal = Signal;
                     nanSignal(IDX) = NaN;
+                    %step 2 - 
                     SigBuff = buffer(abs(nanSignal),double(round(options.SampleRate/2)));% buffer will fail if data is empty
                     clear nanSignal;
                     BuffMax = max(SigBuff);
                     clear SigBuff;
+                    %step 3 -
                     DCThresh = (max(BuffMax)-min(BuffMax)) * options.full.STDMultiplier;
+                    %step 4 - 
                     if DCThresh < min(BuffMax)*2  %deal with sig's with no artifact
                         DCThresh = min(BuffMax)*2;
                         errorstr = ['Warning: NSB_ArtifactDetection >> DCThresh < min(BuffMax)*2. Using ',num2str(DCThresh),' as threshold calculated as min(BuffMax)*2.'];
@@ -156,11 +171,20 @@ switch upper(options.algorithm)
                         end
                     end
                     ExtremeSignalIDX = abs(Signal) >=  DCThresh;
-                    
+
+                    errorstr = ['Info: NSB_ArtifactDetection:Full(Scaled) - STDMultiplier = ',options.full.STDMultiplier, '(',DCThresh,' mV)'];
+                    if ~isempty(options.logfile)
+                        NSBlog(options.logfile,errorstr);
+                    end
                     
                 otherwise %use DC thresh
                     DCThresh = options.full.DCvalue;
                     ExtremeSignalIDX = abs(Signal) >=  DCThresh;
+
+                    errorstr = ['Info: NSB_ArtifactDetection:Full(DCvalue) - DCvalue = ',options.full.DCvalue, '(mV)'];
+                    if ~isempty(options.logfile)
+                        NSBlog(options.logfile,errorstr);
+                    end
             end
             
             
@@ -272,7 +296,7 @@ if options.rm2Zero
     %get ends of artifact and extend to nearest Zero Crossing
     ArtifactStarts = strfind(char(double(Artifacts)'), char([0 1])) +1;
     ArtifactEnds = strfind(char(double(Artifacts)'), char([1 0]));
-    disp(['NSB_ArtifactDetection - Extending Artifacts to Zero Crossings. ', num2str(length(ArtifactEnds)),' events']);
+    disp(['Info: NSB_ArtifactDetection - Extending Artifacts to Zero Crossings. ', num2str(length(ArtifactEnds)),' events']);
     %new code rockety fast
     counter = 0;
     while ~isempty(ArtifactStarts)
@@ -317,7 +341,7 @@ end
 %% Plot Artifacts
 
 if options.plot
-    disp(['NSB_ArtifactDetection - Generating Artifact Plot...']);
+    disp(['Info: NSB_ArtifactDetection - Generating Artifact Plot...']);
     ArtHeight = -DCThresh/2;
     ts = (1:length(Signal))/options.SampleRate; %seconds  
 
@@ -526,7 +550,7 @@ if length(Signal) > 10000
     else
         logpath = cd;
     end    
-    disp(['NSB_ArtifactDetection - Saving Artifact Plot...']);
+    disp(['Info: NSB_ArtifactDetection - Saving Artifact Plot...']);
 
 % Better naming
 [~,filename,~] = fileparts(options.plotTitle{1});

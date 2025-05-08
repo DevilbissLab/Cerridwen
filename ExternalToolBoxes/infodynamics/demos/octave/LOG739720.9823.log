@@ -1,0 +1,67 @@
+Info:NSB_LoadLicensing >> License Found for DevilbissLab Group=Devilbiss office User=
+Info:NSB_LoadLicensing >> Trying NIC# 1 = 6C-4B-90-E2-CB-F5
+Info:NSB_LoadLicensing >> Framework License Valid.
+Info:NSB_LoadLicensing >> Eternal Framework License Valid.
+Info:NSB_LoadLicensing >> DSI Import Module License Valid.
+Info:NSB_LoadLicensing >> EDF Writer Module License Valid.
+Info:NSB_LoadLicensing >> Sleep Scoring Module License Valid.
+Info:NSB_LoadLicensing >> FIFF Import Module License Valid.
+Info:NSB_LoadLicensing >> Groupwise Table Output Module License Valid.
+NexStep Biomarkers Preclinical EEG Framework log file
+Data Input Selected: Z:\DevilbissLab\SourceCode\Cerridwen\PreClinicalEEGFramework\Validation
+>> Begin Analyses: Sun April 13, 2025 11:34:39 PM
+NSB_Workflow_LIMS: Begin
+NSB_Workflow_LIMS: Opening - Z:\DevilbissLab\SourceCode\Cerridwen\PreClinicalEEGFramework\Validation : Advanced MATLAB Capture mouse movement File Exchange Pick of the Week.URL
+NSB_Workflow_LIMS: Read Time = 0.07165 (sec)
+NSB_Workflow_LIMS: No Timestamp/DSI Offset found in file
+NSB_Workflow_LIMS: Read FAILED - Z:\DevilbissLab\SourceCode\Cerridwen\PreClinicalEEGFramework\Validation : Advanced MATLAB Capture mouse movement File Exchange Pick of the Week.URL
+NSB_Workflow_LIMS: Opening - Z:\DevilbissLab\SourceCode\Cerridwen\PreClinicalEEGFramework\Validation : NSB_SpectralAnalysis_Function.doc
+NSB_Workflow_LIMS: Read Time = 0.000307 (sec)
+NSB_Workflow_LIMS: No Timestamp/DSI Offset found in file
+NSB_Workflow_LIMS: Read FAILED - Z:\DevilbissLab\SourceCode\Cerridwen\PreClinicalEEGFramework\Validation : NSB_SpectralAnalysis_Function.doc
+NSB_Workflow_LIMS: Opening - Z:\DevilbissLab\SourceCode\Cerridwen\PreClinicalEEGFramework\Validation : PreclinicalEEGFramework Validation.doc
+NSB_Workflow_LIMS: Read Time = 0.000277 (sec)
+NSB_Workflow_LIMS: No Timestamp/DSI Offset found in file
+NSB_Workflow_LIMS: Read FAILED - Z:\DevilbissLab\SourceCode\Cerridwen\PreClinicalEEGFramework\Validation : PreclinicalEEGFramework Validation.doc
+NSB_Workflow_LIMS: Opening - Z:\DevilbissLab\SourceCode\Cerridwen\PreClinicalEEGFramework\Validation : PreclinicalEEGFramework Validation2 .doc
+NSB_Workflow_LIMS: Read Time = 0.0002791 (sec)
+NSB_Workflow_LIMS: No Timestamp/DSI Offset found in file
+NSB_Workflow_LIMS: Read FAILED - Z:\DevilbissLab\SourceCode\Cerridwen\PreClinicalEEGFramework\Validation : PreclinicalEEGFramework Validation2 .doc
+NSB_Workflow_LIMS: Opening - Z:\DevilbissLab\SourceCode\Cerridwen\PreClinicalEEGFramework\Validation : Spectral Analysis.xls
+NSB_Workflow_LIMS: Read Time = 0.001365 (sec)
+NSB_Workflow_LIMS: No Timestamp/DSI Offset found in file
+NSB_Workflow_LIMS: Read FAILED - Z:\DevilbissLab\SourceCode\Cerridwen\PreClinicalEEGFramework\Validation : Spectral Analysis.xls
+NSB_Workflow_LIMS: Opening - Z:\DevilbissLab\SourceCode\Cerridwen\PreClinicalEEGFramework\Validation : Spectral Analysis2.xls
+NSB_Workflow_LIMS: Read Time = 5.21e-05 (sec)
+NSB_Workflow_LIMS: No Timestamp/DSI Offset found in file
+NSB_Workflow_LIMS: Read FAILED - Z:\DevilbissLab\SourceCode\Cerridwen\PreClinicalEEGFramework\Validation : Spectral Analysis2.xls
+NSB_Workflow_LIMS: Opening - Z:\DevilbissLab\SourceCode\Cerridwen\PreClinicalEEGFramework\Validation : Startdate 18-APR-1989 X X Polyman_EEG Fpz-Cz_FFT.txt
+NSB_Workflow_LIMS: Read Time = 4.86e-05 (sec)
+NSB_Workflow_LIMS: No Timestamp/DSI Offset found in file
+NSB_Workflow_LIMS: Read FAILED - Z:\DevilbissLab\SourceCode\Cerridwen\PreClinicalEEGFramework\Validation : Startdate 18-APR-1989 X X Polyman_EEG Fpz-Cz_FFT.txt
+NSB_Workflow_LIMS: Opening - Z:\DevilbissLab\SourceCode\Cerridwen\PreClinicalEEGFramework\Validation : Startdate 18-APR-1989 X X Polyman_EEG Fpz-Cz_Periodogram.txt
+NSB_Workflow_LIMS: Read Time = 4.15e-05 (sec)
+NSB_Workflow_LIMS: No Timestamp/DSI Offset found in file
+NSB_Workflow_LIMS: Read FAILED - Z:\DevilbissLab\SourceCode\Cerridwen\PreClinicalEEGFramework\Validation : Startdate 18-APR-1989 X X Polyman_EEG Fpz-Cz_Periodogram.txt
+NSB_Workflow_LIMS: Opening - Z:\DevilbissLab\SourceCode\Cerridwen\PreClinicalEEGFramework\Validation : WaterFallPlot.txt
+NSB_Workflow_LIMS: Read Time = 0.0001165 (sec)
+NSB_Workflow_LIMS: No Timestamp/DSI Offset found in file
+NSB_Workflow_LIMS: Read FAILED - Z:\DevilbissLab\SourceCode\Cerridwen\PreClinicalEEGFramework\Validation : WaterFallPlot.txt
+NSB_Workflow_LIMS: Opening - Z:\DevilbissLab\SourceCode\Cerridwen\PreClinicalEEGFramework\Validation : sc4102e0.edf
+NSB_Workflow_LIMS: Read Time = 1.5615 (sec)
+NSB_Workflow_LIMS: File Start Time = 18-Apr-1989 15:56:00
+NSB_Workflow_LIMS: No Timestamp/DSI Offset found in file
+NSB_Workflow_LIMS: Read OK - Z:\DevilbissLab\SourceCode\Cerridwen\PreClinicalEEGFramework\Validation : sc4102e0.edf
+NSB_Workflow_LIMS: ...Detrending Channels 13-Apr-2025 23:35:10
+NSB_Workflow_LIMS: ...Detrending Channels Sucessful. 13-Apr-2025 23:35:11
+NSB_Workflow_LIMS: resampling data to 250 Hz
+NSB_Workflow_LIMS: ...Analyzing Ch#1 EEG Fpz-Cz: 13-Apr-2025 23:35:11
+NSB_Workflow_LIMS >> Found EMG Channel #5 EEG Fpz-Cz: 13-Apr-2025 23:35:11
+NSB_Workflow_LIMS: ...Detecting Artifacts: 13-Apr-2025 23:35:11
+Information: NSB_ArtifactDetection >> 1.9971% of file marked as artifact
+NSB_Workflow_LIMS: ...Running Spectral Analysis: 13-Apr-2025 23:35:14
+NSB_Workflow_LIMS: ...Saving Spectral Analysis: 13-Apr-2025 23:35:15
+NSB_Workflow_LIMS: ...Running Univariate ActiveInfoStorage Analysis: 13-Apr-2025 23:36:25
+>> Analyses FAILED: 
+>> Analyses FAILED: MATLAB:badnullindexDeletion requires an existing variable.
+>> Quitting Analyses: Mon April 14, 2025  9:56:44 AM

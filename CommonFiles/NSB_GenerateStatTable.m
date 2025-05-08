@@ -630,6 +630,10 @@ for curRow = 2:DesignLength
                         errordlg(infostr,'NSB_GenerateStatTable','replace');
                     end
                 end
+
+                % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                % Find Pivot Row << the Row that is the new Relative time zero (i.e. dosing time)
+                % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 %DoseTime = datenum(StudyDesign{curRow,DateCol}) + StudyDesign{curRow,8}; %<<<<<<<<<<<<<<<<<< hard coded !!!
                 if ~isnan(DoseTime)
                     PivotRow = find(eegdata(:,3) >= DoseTime, 1 ,'first'); %EEG Spread sheet, date num is col 3
@@ -933,7 +937,9 @@ for curRow = 2:DesignLength
                     errordlg(infostr,'NSB_GenerateStatTable','replace');
                 end
             end
-            
+           
+% One Issue found is when the sleep and spectral are processed at different
+% binnings
             if eegProcessed && ssProcessed
                 %Error check for differences in size and pivot row
                 %check for Pivot row (Predose length)
