@@ -180,7 +180,8 @@ crossIDX = IDX0 | IDXcross;
 counter = 0;
 while ~isempty(SpikeStarts)
     counter = counter +1;
-    if SpikeStarts(end) + counter > length(SpikeStarts) %test for EOF
+    %if SpikeStarts(end) + counter > length(SpikeStarts) %test for EOF
+    if SpikeStarts(end) + counter > length(Signal) %test for EOF 
         SpikeStarts(end) = [];
     end
     SignDiff = sign(Signal(SpikeStarts + counter)) ~= sign(Signal(SpikeStarts));
@@ -221,17 +222,22 @@ if ~isempty(SpikeStarts) && ~isempty(SpikeEnds)
     
     % Find Valid Spikes of correct width (this has to be @ zero Crossing) <<<
     ValidSpikes = (highSpikeInt < SpikeInfo(:,2)) &  (SpikeInfo(:,2) < lowSpikeInt);
-    
+    disp(['NSB_SeizureDetection - Valid Spikes. ', num2str(length(ValidSpikes)),' events']);
+
     ValidSpikeInfo = SpikeInfo(ValidSpikes,:);
-    %for those valid spikes get inter-spike interval and whether it is a valid interval
-    ValidSpikeInts(:,1) = find(ValidSpikes);
-    ValidSpikeInts(:,2) = [diff(ValidSpikeInfo(:,1)) * SampleInt; NaN]; %Get inter spike intervals
-    ValidSpikeInts(:,3) = [(diff(ValidSpikeInfo(:,1)) * SampleInt) > options.detector.minSpikeInt &...
-        (diff(ValidSpikeInfo(:,1)) * SampleInt) < options.detector.maxSpikeInt; NaN]; %get logical whether this is a valid interval
-    
-    TrainStarts = (strfind(char(double(ValidSpikeInts(1:end-1,3))'), char([0 1])) +1)';
-    TrainEnds = (strfind(char(double(ValidSpikeInts(1:end-1,3))'), char([1 0])) +1)'; %want to capture data on decending limb
-    
+    if ~isempty(ValidSpikeInfo)
+        %for those valid spikes get inter-spike interval and whether it is a valid interval
+        ValidSpikeInts(:,1) = find(ValidSpikes);
+        ValidSpikeInts(:,2) = [diff(ValidSpikeInfo(:,1)) * SampleInt; NaN]; %Get inter spike intervals
+        ValidSpikeInts(:,3) = [(diff(ValidSpikeInfo(:,1)) * SampleInt) > options.detector.minSpikeInt &...
+            (diff(ValidSpikeInfo(:,1)) * SampleInt) < options.detector.maxSpikeInt; NaN]; %get logical whether this is a valid interval
+
+        TrainStarts = (strfind(char(double(ValidSpikeInts(1:end-1,3))'), char([0 1])) +1)';
+        TrainEnds = (strfind(char(double(ValidSpikeInts(1:end-1,3))'), char([1 0])) +1)'; %want to capture data on decending limb
+    else
+        TrainStarts = [];
+        TrainEnds = [];
+    end
     if ~isempty(TrainStarts)
         %handle edges
         if ValidSpikeInts(1,3) == 1

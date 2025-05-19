@@ -38,7 +38,7 @@ elseif ismac
     [retVal, text] = system('netstat -I en0');
     PA_lines = strfind(text,'>');
     for curNIC = 1:length(PA_lines)
-        NIC_Tokens(curNIC) = regexp(text(PA_lines(curNIC):PA_lines(curNIC)+128),'[0-9A-F]{2}+-[0-9A-F]{2}+-[0-9A-F]{2}+-[0-9A-F]{2}+-[0-9A-F]{2}+-[0-9A-F]{2}', 'match');
+        NIC_Tokens(curNIC) = regexp(text(PA_lines(curNIC):PA_lines(curNIC)+128),'[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}', 'match');
     end
 end
 
@@ -194,7 +194,7 @@ ValidNIC = []; PrimeKey = []; pwdNums = [];
 if isempty(NIC_Tokens)
     return;
 end
-ValidNIC = NIC_Tokens{nNIC};
+ValidNIC = upper(NIC_Tokens{nNIC});
 PrimeKey = regexprep(num2str(uint8(ValidNIC)),'\s','');
 
 %Generate PassCode for Framework

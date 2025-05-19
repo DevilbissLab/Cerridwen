@@ -107,7 +107,11 @@ if ~isempty(LIMS.StudyDesign)
             
             % If a unique param file was loaded and there is not one now... load the default
             if LIMS.usingUniqueParmsFiles
+                if isstruct(LIMS.StudyDesign{curFile}.AnalysisChan)
                 NSBlog(LIMS.logfile,['Warning: NSB_Workflow_LIMS >> Parameter .xml not specified (using initial parameters from GUI): ',LIMS.StudyDesign{curFile}.AnalysisChan(1).ParamsFile]);
+                else
+                   NSBlog(LIMS.logfile,['Warning: NSB_Workflow_LIMS >> Parameter .xml not specified (using initial parameters from GUI): ']);
+                end
                 LIMS.PreClinicalFramework = handles.parameters.PreClinicalFramework;
                 LIMS.usingUniqueParmsFiles = false;
             end
@@ -244,9 +248,10 @@ if ~isempty(LIMS.StudyDesign)
 set(handles.status_stxt,'String', cell(0)); %create cell array
 status = updatePreClinicalFrameworkStatus(handles, LIMS, LIMS.StudyDesign{curFile,1}.name);
 
-[status, LIMS.AbortProcessing] = updateProgress(LIMS,curFile/size(LIMS.StudyDesign,1),['Subject: ',LIMS.StudyDesign{curFile,1}.name]);
+[status, LIMS.AbortProcessing, msg] = updateProgress(LIMS,curFile/size(LIMS.StudyDesign,1),['Subject: ',LIMS.StudyDesign{curFile,1}.name]);
 if LIMS.AbortProcessing
-    status = updatePreClinicalFrameworkStatus(handles, LIMS, 'File Import Aborted.', 'NSB_Workflow_LIMS');
+    status = updatePreClinicalFrameworkStatus(handles, LIMS, 'File Import Aborted.');
+    status = updatePreClinicalFrameworkStatus(handles, LIMS, msg);
     break; 
 else       
         try
@@ -387,7 +392,6 @@ if isstruct(LIMS.StudyDesign{curFile}.AnalysisChan)
     end
 elseif islogical(handles.StudyDesign{curFile}.AnalysisChan)
     keepChannels = 1:DataStruct.nChannels;
-    LIMS.ValidDataChans = find([DataStruct.Channel(:).Hz] > 60);
 end
 
 %% Remove unwanted Channels
@@ -410,6 +414,8 @@ if isstruct(LIMS.StudyDesign{curFile}.AnalysisChan)
         LIMS.DoseChan = LIMS.DoseChan - DoseChanOffset;
     end   
 end
+
+LIMS.ValidDataChans = find([DataStruct.Channel(:).Hz] > 60);
 
 %% Detrend if requested (not an option - by default)
 status = updateProgress(LIMS);
@@ -503,11 +509,13 @@ for curChannel = 1:length(DataStruct.Channel)
         %Do not do this for EMG
         status = updateProgress(LIMS);
 
-        if isNotEMGChannel %Don't Process EMG Channel
-            if handles.AnalysisStruct.doSpectralAnalysis || ...
-                    handles.AnalysisStruct.doSomnogram || ...
-                    handles.AnalysisStruct.doTransferEntropy || ...
-                    handles.AnalysisStruct.doActiveInfoStorage
+        if LIMS.PreClinicalFramework.ArtifactDetection.doDetection
+            if isNotEMGChannel %Don't Process EMG Channel
+                %Refactored to make detection a default/user option regardless of the analysis
+                % if handles.AnalysisStruct.doSpectralAnalysis || ...
+                %         handles.AnalysisStruct.doSomnogram || ...
+                %         handles.AnalysisStruct.doTransferEntropy || ...
+                %         handles.AnalysisStruct.doActiveInfoStorage
 
                 status = updatePreClinicalFrameworkStatus(handles, LIMS,'...Detecting Artifacts');
                 NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ...Detecting Artifacts: ',datestr(now)]);
@@ -520,9 +528,12 @@ for curChannel = 1:length(DataStruct.Channel)
 
                 [DataStruct.Channel(curChannel).Artifacts, AnalysisStatus] = NSB_ArtifactDetection(DataStruct.Channel(curChannel).Data,...
                     LIMS.PreClinicalFramework.ArtifactDetection);
+                %end
+            else
+                NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ...Not Detecting Artifacts on EMG Channel: ',datestr(now)]);
             end
         else
-            NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ...Not Detecting Artifacts on EMG Channel: ',datestr(now)]);
+            NSBlog(LIMS.logfile,['Warning: NSB_Workflow_LIMS >> Artifact Detection not performed/selected. ',datestr(now)]);
         end
 
         % %%%%%%%%%%%%%%%%%%%   Run Seizure Detection
@@ -1030,16 +1041,22 @@ try, delete(LIMS.hWaitbar); end
 status = true;
 end
 
-function [status, AbortProcessing] = updateProgress(LIMS,pct,str)
+function [status, AbortProcessing, msg] = updateProgress(LIMS,pct,str)
 status = false;
 AbortProcessing = false;
+msg = '';
 if LIMS.progress
-    if getappdata(LIMS.hWaitbar,'Canceling')
-        AbortProcessing = true;
-    end
     if nargin > 1
         waitbar( pct ,LIMS.hWaitbar, str); %WaitBAr uses tex interpreter
+        status = true;
     end
+    if getappdata(LIMS.hWaitbar,'Canceling')
+        AbortProcessing = true;
+        status = false;
+        msg = 'User Canceled Processing Files.';
+    end
+else
+    status = true;
 end
 end
 

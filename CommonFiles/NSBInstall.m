@@ -57,26 +57,26 @@ if strcmpi(fcn,'add')
         
 
     elseif ismac
-        addpath '/Volumes/Volume_1/UserData/NexStepBiomarkers/NSB_AnalyticFramework/PreClinicalEEGFramework';
-        addpath '/Volumes/Volume_1/UserData/NexStepBiomarkers/NSB_AnalyticFramework/CommonFiles';
+        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/PreClinicalEEGFramework';
+        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/CommonFiles';
         if MatlabPost2014
-            addpath '/Volumes/Volume_1/UserData/NexStepBiomarkers/NSB_AnalyticFramework/ExternalToolBoxes/tinyXML2';
+            addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/tinyXML2';
         else
-            addpath '/Volumes/Volume_1/UserData/NexStepBiomarkers/NSB_AnalyticFramework/ExternalToolBoxes/xml_toolbox';
+            addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/xml_toolbox';
         end
-        addpath '/Volumes/Volume_1/UserData/NexStepBiomarkers/NSB_AnalyticFramework/ExternalToolBoxes/son';
-        addpath '/Volumes/Volume_1/UserData/NexStepBiomarkers/NSB_AnalyticFramework/ExternalToolBoxes/son/SON32';
-        addpath '/Volumes/Volume_1/UserData/NexStepBiomarkers/NSB_AnalyticFramework/ExternalToolBoxes/fuf';
-        addpath '/Volumes/Volume_1/UserData/NexStepBiomarkers/NSB_AnalyticFramework/ExternalToolBoxes/struct2xml';
-        addpath '/Volumes/Volume_1/UserData/NexStepBiomarkers/NSB_AnalyticFramework/ExternalToolBoxes/Word';
-        addpath '/Volumes/Volume_1/UserData/NexStepBiomarkers/NSB_AnalyticFramework/ExternalToolBoxes/ACQreader';
-        addpath '/Volumes/Volume_1/UserData/NexStepBiomarkers/NSB_AnalyticFramework/ExternalToolBoxes/NPMK';
-        addpath '/Volumes/Volume_1/UserData/NexStepBiomarkers/NSB_AnalyticFramework/ExternalToolBoxes/infodynamics';
-        addpath '/Volumes/Volume_1/UserData/NexStepBiomarkers/NSB_AnalyticFramework/ExternalToolBoxes/infodynamics/utils';
-        javaaddpath('/Volumes/Volume_1/UserData/NexStepBiomarkers/NSB_AnalyticFramework/ExternalToolBoxes/infodynamics/infodynamics.jar');
-        addpath '/Volumes/Volume_1/UserData/NexStepBiomarkers/NSB_AnalyticFramework/Importers';
-        addpath '/Volumes/Volume_1/UserData/NexStepBiomarkers/NSB_AnalyticFramework/Exporters';
-        addpath '/Volumes/Volume_1/UserData/NexStepBiomarkers/NSB_AnalyticFramework/SleepScoringToolbox';
+        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/son';
+        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/son/SON32';
+        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/fuf';
+        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/struct2xml';
+        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/Word';
+        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/ACQreader';
+        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/NPMK';
+        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/infodynamics';
+        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/infodynamics/utils';
+        javaaddpath('/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/infodynamics/infodynamics.jar');
+        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/Importers';
+        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/Exporters';
+        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/SleepScoringToolbox';
         addpath '/Volumes/Volume_1/UserData/NexStepBiomarkers/DataSpider';
     elseif isunix
         addpath '/home/ddevilbiss/Diskstation/NSB_AnalyticFramework/PreClinicalEEGFramework';

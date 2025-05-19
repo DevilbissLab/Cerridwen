@@ -78,21 +78,20 @@ switch nargin
         if ~isfield(options,'IndexedOutput'), options.IndexedOutput = true;inputError = true; end
         if ~isfield(options,'algorithm'), options.algorithm = 'FULL';inputError = true; end
         if ~isfield(options,'logfile'), options.logfile = '';inputError = true; end
-        if ~isfield(options,'DCvalue'), options.DCvalue = 100;inputError = true; end
+        if ~isfield(options,'DCvalue'), options.DCvalue = 100;inputError = true; 
+            else, options.DCvalue = abs(options.DCvalue); end
         if ~isfield(options,'RMSMultiplier'), options.RMSMultiplier = 3;inputError = true; 
-            else, if sign(options.RMSMultiplier) == -1, options.RMSMultiplier = abs(options.RMSMultiplier); end;
-            end
+            else options.RMSMultiplier = abs(options.RMSMultiplier); end
         if ~isfield(options,'rm2Zero'), options.rm2Zero = true;inputError = true; end
         if ~isfield(options,'plot'), options.plot = true;inputError = true; end
-        if ~isfield(options,'plotTitle'), options.plotTitle = '';inputError = true; end
+        if ~isfield(options,'plotTitle'), options.plotTitle = '';inputError = true; 
+            else [~, fName,fExt] = fileparts(options.plotTitle); options.plotTitle = strcat(fName,fExt); end
         if ~isfield(options,'full'),options.full.DCvalue = 100;inputError = true; end %Create .full structure and fill with default.
         if ~isfield(options.full,'DCcalculation'), options.full.DCcalculation = 'scaled';inputError = true; end
         if ~isfield(options.full,'DCvalue'), options.full.DCvalue = 100;inputError = true;
-            else, if sign(options.DCvalue) == -1, options.DCvalue = abs(options.DCvalue); end;
-            end
+            else options.full.DCvalue = abs(options.full.DCvalue); end
         if ~isfield(options.full,'STDMultiplier'), options.full.STDMultiplier = 3;inputError = true;
-            else, if sign(options.full.STDMultiplier) == -1, options.full.STDMultiplier = abs(options.full.STDMultiplier); end;
-            end
+            else options.full.STDMultiplier = abs(options.full.STDMultiplier); end
         if ~isfield(options.full,'minFlatSigLength'), options.full.minFlatSigLength = 0.1;inputError = true; end
         if ~isfield(options.full,'dvValMultiplier'), options.full.dvValMultiplier = .8;inputError = true; end
         if ~isfield(options.full,'MaxDT'), options.full.MaxDT = 4;inputError = true; end
@@ -124,7 +123,7 @@ switch upper(options.algorithm)
         Artifacts = (Signal > rms*options.RMSMultiplier) | ...
             (Signal < -rms*options.RMSMultiplier);
 
-        errorstr = ['Info: NSB_ArtifactDetection:RMS Detection - RMSMultiplier = ',options.RMSMultiplier, '(',rms*options.RMSMultiplier,' mV)'];
+        errorstr = ['Info: NSB_ArtifactDetection:RMS Detection - RMSMultiplier = ',num2str(options.RMSMultiplier), '(',num2str(rms*options.RMSMultiplier),' mV)'];
         if ~isempty(options.logfile)
            NSBlog(options.logfile,errorstr);
         end
@@ -132,9 +131,9 @@ switch upper(options.algorithm)
     case 'DC'
         %% determine the positions where signal is above DC Threshold
         Artifacts = (Signal > options.DCvalue) | ...
-            (Signal < -options.DCvalue);
+            (Signal < -options.DCvalue); %This is important because you want to catch a zero crossing
 
-        errorstr = ['Info: NSB_ArtifactDetection:DC Detection - DCvalue = ',options.DCvalue, '(mV)'];
+        errorstr = ['Info: NSB_ArtifactDetection:DC Detection - DCvalue = ',num2str(options.DCvalue), '(mV)'];
         if ~isempty(options.logfile)
            NSBlog(options.logfile,errorstr);
         end
@@ -170,25 +169,25 @@ switch upper(options.algorithm)
                             errordlg(errorstr,'NSB_ArtifactDetection');
                         end
                     end
-                    ExtremeSignalIDX = abs(Signal) >=  DCThresh;
+                    ExtremeSignalIDX = (Signal > options.DCvalue) | ...
+                                        (Signal < -options.DCvalue);
 
-                    errorstr = ['Info: NSB_ArtifactDetection:Full(Scaled) - STDMultiplier = ',options.full.STDMultiplier, '(',DCThresh,' mV)'];
+                    errorstr = ['Info: NSB_ArtifactDetection:Full(Scaled) - STDMultiplier = ',num2str(options.full.STDMultiplier), '(',DCThresh,' mV)'];
                     if ~isempty(options.logfile)
                         NSBlog(options.logfile,errorstr);
                     end
                     
                 otherwise %use DC thresh
                     DCThresh = options.full.DCvalue;
-                    ExtremeSignalIDX = abs(Signal) >=  DCThresh;
+                    ExtremeSignalIDX = (Signal > options.DCvalue) | ...
+                                        (Signal < -options.DCvalue);
 
-                    errorstr = ['Info: NSB_ArtifactDetection:Full(DCvalue) - DCvalue = ',options.full.DCvalue, '(mV)'];
+                    errorstr = ['Info: NSB_ArtifactDetection:Full(DCvalue) - DCvalue = ',num2str(options.full.DCvalue), '(mV)'];
                     if ~isempty(options.logfile)
                         NSBlog(options.logfile,errorstr);
                     end
             end
-            
-            
-            
+                      
             %% drop out detection
             % find segments of dropout or "railed" saturated
             
@@ -380,7 +379,11 @@ if length(Signal) > 10000
     title(options.plotTitle,'FontWeight','bold','Interpreter', 'none');
     ylabel('Signal');
     set(get(h_fig,'CurrentAxes'),'XMinorTick','on')
-    set(get(h_fig,'CurrentAxes'),'YLim',[-DCThresh*1.5,DCThresh*1.5]);
+    if sign(DCThresh) == -1
+        set(get(h_fig,'CurrentAxes'),'YLim',[DCThresh*1.5,-DCThresh*1.5]);
+    else
+        set(get(h_fig,'CurrentAxes'),'YLim',[-DCThresh*1.5,DCThresh*1.5]);
+    end
     
     %plot(Artifacts,':r');
     if strcmpi(options.algorithm,'full')
@@ -402,7 +405,7 @@ if length(Signal) > 10000
         line([1,ts(end)],DCThresh * ones(2,1),'Color','k');
         line([1,ts(end)],-DCThresh * ones(2,1),'Color','k');
         end
-        legend('Signal','ExtremeArtifact','dvArifact','dropoutArtifact','EMGartifact','Artifacts');
+        legend('Signal','ExtremeArtifact','dvArifact','dropoutArtifact','EMGartifact','Artifacts','Threshold');
     elseif strcmpi(options.algorithm,'full -EMG')
         if reduceSample
         plot(ts,ExtremeSignalIDX(1:10:end)*ArtHeight,':c');
@@ -420,7 +423,7 @@ if length(Signal) > 10000
         line([1,ts(end)],-DCThresh * ones(2,1),'Color','k');
         
         end
-        legend('Signal','ExtremeArtifact','dvArifact','dropoutArtifact','EMGartifact','Artifacts');
+        legend('Signal','ExtremeArtifact','dvArifact','dropoutArtifact','Artifacts','Threshold');
         
     elseif strcmpi(options.algorithm,'rms')
         if reduceSample  
@@ -444,7 +447,7 @@ if length(Signal) > 10000
         line([1,ts(end)],options.DCvalue * ones(2,1),'Color','k');
         line([1,ts(end)],-options.DCvalue * ones(2,1),'Color','k');
         end
-        legend('Signal','DC value','Artifacts');
+        legend('Signal','Artifacts','DC value');
     end
 %%
 %     if length(Signal) > 10000

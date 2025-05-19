@@ -71,6 +71,7 @@ function parms = NSB_ParameterFile()
 % June 14 2022 ver 3.02 Fixed LIMS issue with file specific parameters
 % Feb 13 2024 ver 3.10 Forcing signal detrend before artifact detection. Started to cleanup code and parameter handling.
 % April 15 2025 ver 3.2x adding JIDT toolbox for connectivity analysis
+% April 19 2025 ver 3.21 Bug fixes, Major bug fix with artifact detection.
 %
 %
 % NSB Data Format
@@ -165,6 +166,7 @@ parms.PreClinicalFramework.StatsTable.BaselineMeanTimeStart = [];
 parms.PreClinicalFramework.StatsTable.BaselineMeanTimeEnd = [];
 
 % Artifact Detection default parameters
+parms.PreClinicalFramework.ArtifactDetection.doDetection = true;
 parms.PreClinicalFramework.ArtifactDetection.SampleRate = 100;
 parms.PreClinicalFramework.ArtifactDetection.IndexedOutput = true;
 parms.PreClinicalFramework.ArtifactDetection.algorithm = 'FULL';

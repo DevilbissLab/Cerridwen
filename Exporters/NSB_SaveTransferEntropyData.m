@@ -1,4 +1,4 @@
-function [AnalysisStatus, MetaData] = NSB_SaveTransferEntropyData(RecordingStruct, handles, curFile, chans);
+function [status, filenames] = NSB_SaveTransferEntropyData(RecordingStruct, handles, curFile, chans)
 %[status, filenames] = NSB_SaveTransferEntropyData(RecordingStruct, handles, curFile, chans)
 %
 % Inputs:
@@ -15,17 +15,25 @@ function [AnalysisStatus, MetaData] = NSB_SaveTransferEntropyData(RecordingStruc
 %       .metadata
 %       .filename
 
+status = false;
+filenames.type = 'TransferEntropy';
+if isempty(chans)
+    return;
+end
+%tempory fix for incomplete TE analysis
+if length(chans) < 2
+    return;
+end
 
 %Find ChanLabel
 % Find the channel that the data struct is on.
-for ch = LIMS.ValidDataChans  %<<<< 
-    if isstruct(DataStruct.Channel(ch).TransferEntropyCalculator)
-        MetaDataArray{10,3} = DataStruct.Channel(ch).TransferEntropyCalculator.name;
+for ch = chans  %<<<< 
+    if isstruct(RecordingStruct.Channel(ch).TransferEntropyCalculator)
+        MetaDataArray{10,3} = RecordingStruct.Channel(ch).TransferEntropyCalculator.name;
     else
         MetaDataArray{10,3} = RecordingStruct.Channel(chan).Name;
     end
 end
-
 
 [OutputDir,trash1,trash2] = fileparts(RecordingStruct.Filename);
 OutputDir = fullfile(OutputDir,'NSB_Output');
@@ -37,12 +45,10 @@ existXLSax = true;
 if exist(OutputDir,'dir') == 0
     mkdir(OutputDir);
 end
-status = false;
-filenames.type = 'TransferEntropy';
 
 %% generate MetaData Sheet
 MetaDataArray = cell(0);
-MetaDataArray{1,1} = 'NexStep Biomarkers AIS Data';
+MetaDataArray{1,1} = 'NexStep Biomarkers TE Data';
 MetaDataArray{1,2} = get(options.ver_stxt,'String');
 MetaDataArray{2,1} = 'Analysis Date';
 MetaDataArray{2,2} = regexprep(get(options.date_stxt,'String'),',',''); %remove commas
@@ -126,10 +132,10 @@ DataTable = [EpochNumber,RecordingStruct.Channel(chan).Spectrum_validBins(:),Cal
     RecordingStruct.Channel(chan).TransferEntropyCalculator.NullStd(:),...
     RecordingStruct.Channel(chan).TransferEntropyCalculator.Nullp(:)];
 
-[status,msg] = NSB_WriteGenericCSV(SheetHeader, fullfile(OutputDir,[OutputFile,'_AISData.csv']),false);
-[status,msg] = NSB_WriteGenericCSV(DataTable, fullfile(OutputDir,[OutputFile,'_AISData.csv']),true);
+[status,msg] = NSB_WriteGenericCSV(SheetHeader, fullfile(OutputDir,[OutputFile,'_TEData.csv']),false);
+[status,msg] = NSB_WriteGenericCSV(DataTable, fullfile(OutputDir,[OutputFile,'_TEData.csv']),true);
 if status 
-    filenames.filename = fullfile(OutputDir,[OutputFile,'_AISData.csv']);
+    filenames.filename = fullfile(OutputDir,[OutputFile,'_TEData.csv']);
 end
 
 
@@ -145,10 +151,10 @@ DataTable = [EpochNumber,RecordingStruct.Channel(chan).Spectrum_validBins(:),Cal
     RecordingStruct.Channel(chan).TransferEntropyCalculator.Nullp(:)];
 
 %now write sheet
-[status,msg] = NSB_WriteGenericCSV(MetaDataArray, fullfile(OutputDir,[OutputFile,'_AIS_BioBook.csv']),false);
-[status,msg] = NSB_WriteGenericCSV(cell(12,1), fullfile(OutputDir,[OutputFile,'_AIS_BioBook.csv']),true);
-[status,msg] = NSB_WriteGenericCSV(SheetHeader, fullfile(OutputDir,[OutputFile,'_AIS_BioBook.csv']),true);
-[status,msg] = NSB_WriteGenericCSV(DataTable, fullfile(OutputDir,[OutputFile,'_AIS_BioBook.csv']),true);
+[status,msg] = NSB_WriteGenericCSV(MetaDataArray, fullfile(OutputDir,[OutputFile,'_TE_BioBook.csv']),false);
+[status,msg] = NSB_WriteGenericCSV(cell(12,1), fullfile(OutputDir,[OutputFile,'_TE_BioBook.csv']),true);
+[status,msg] = NSB_WriteGenericCSV(SheetHeader, fullfile(OutputDir,[OutputFile,'_TE_BioBook.csv']),true);
+[status,msg] = NSB_WriteGenericCSV(DataTable, fullfile(OutputDir,[OutputFile,'_TE_BioBook.csv']),true);
 %%%
 end
 %%%%%Write xls sheet

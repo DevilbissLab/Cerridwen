@@ -259,12 +259,17 @@ else % multivariate analysis
 
     elseif length(options.JIDT.AnalysisChannels) > 2
 
-        %todo
-        error('Cannot run multivatiate now')
+        logstr = ['NSB_ConnectivityAnalysis - Cannot perform Multivariate TE on more than 2 channels.'];
+        disp(logstr);
+        NSBlog(options.logfile,logstr);
 
     else
         %univariate
         % error
+        %logstr = ['NSB_ConnectivityAnalysis - Analyzing Channel ',DataStruct.Channel(options.JIDT.AnalysisChannels(1)).Name];
+        logstr = ['NSB_ConnectivityAnalysis - Cannot perform Multivariate TE on one channel ',DataStruct.Channel(options.JIDT.AnalysisChannels(1)).Name];
+        disp(logstr);
+        NSBlog(options.logfile,logstr);
     end
 
 

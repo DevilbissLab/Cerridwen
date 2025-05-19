@@ -925,7 +925,11 @@ for curRow = 2:DesignLength
             catch ME
                 SeizureStatProcessed = false;
                 ssPivotRow = [];
-                infostr = ['ERROR: NSB_GenerateStatTable >> Data Not Loaded: ',fullfile(DataFolderPath,'NSB_Output',SubjectSeizureStatsList{SubjectSeizureStatsFileChannelList_IDX})];
+                try
+                    infostr = ['ERROR: NSB_GenerateStatTable >> Data Not Loaded: ',fullfile(DataFolderPath,'NSB_Output',SubjectSeizureStatsList{SubjectSeizureStatsFileChannelList_IDX})];
+                catch
+                    infostr = ['ERROR: NSB_GenerateStatTable >> Data Not Loaded: ',fullfile(DataFolderPath,'NSB_Output',SubjectSeizureStatsList{1})];
+                end
                 disp(infostr);
                 disp(ME.identifier);
                 disp(ME.message);

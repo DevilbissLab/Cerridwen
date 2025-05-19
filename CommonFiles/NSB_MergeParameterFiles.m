@@ -28,11 +28,15 @@ for curFile = 1:FileList_len
     disp(['Processing...',MergeXMLFileList{curFile}]);
     [~,fn,ext] = fileparts(MergeXMLFileList{curFile});
     waitbar(curFile/FileList_len,f,sprintf('%s',[fn,ext]));
+    if strcmpi(ext,'.xml')
     MergeXMLStruct = tinyxml2_wrap('load', MergeXMLFileList{curFile});
     SaveXMLStruct = MasterXMLStruct; %refresh Save Struct
     SaveXMLStruct.ArtifactDetection = MergeXMLStruct.ArtifactDetection;
     tinyxml2_wrap('save', fullfile(SaveXMLDir, [fn, ext]), SaveXMLStruct);
     disp(['Successfully Saved: ',fullfile(SaveXMLDir,[fn, ext])]);
+    else
+    disp(['Skipping: ',fullfile(SaveXMLDir,[fn, ext])]);
+    end
 end
 try, delete(f); end
 status = true;
