@@ -1,4 +1,4 @@
-function [status, filenames] = NSB_SaveTransferEntropyData(RecordingStruct, handles, curFile, chans)
+function [status, filenames] = NSB_SaveTransferEntropyData(RecordingStruct, options, curFile, chans)
 %[status, filenames] = NSB_SaveTransferEntropyData(RecordingStruct, handles, curFile, chans)
 %
 % Inputs:
@@ -27,11 +27,17 @@ end
 
 %Find ChanLabel
 % Find the channel that the data struct is on.
+ChanLabel = '';
 for ch = chans  %<<<< 
     if isstruct(RecordingStruct.Channel(ch).TransferEntropyCalculator)
-        MetaDataArray{10,3} = RecordingStruct.Channel(ch).TransferEntropyCalculator.name;
+        ChanLabel = RecordingStruct.Channel(ch).TransferEntropyCalculator.name;
+        break;
     else
-        MetaDataArray{10,3} = RecordingStruct.Channel(chan).Name;
+        if ~isempty(ChanLabel)
+            ChanLabel = [ChanLabel, ':', RecordingStruct.Channel(ch).Name];
+        else
+            ChanLabel = RecordingStruct.Channel(ch).Name;
+        end
     end
 end
 
@@ -72,13 +78,7 @@ MetaDataArray{9,1} = 'Subject ID';
 MetaDataArray{9,2} = RecordingStruct.SubjectID;
 MetaDataArray{10,1} = 'Channel';
 MetaDataArray{10,2} = chans;
-for ch = LIMS.ValidDataChans
-    if isstruct(DataStruct.Channel(ch).TransferEntropyCalculator)
-        MetaDataArray{10,3} = DataStruct.Channel(ch).TransferEntropyCalculator.name;
-    else
-        MetaDataArray{10,3} = RecordingStruct.Channel(chan).Name;
-    end
-end
+MetaDataArray{10,3} = ChanLabel;
 
 MetaDataArray{12,1} = 'Path/File Name';
 if isfield(RecordingStruct,'Filename')
@@ -114,23 +114,52 @@ if ~isempty(msg.message) && ~isempty(strfind(msg.message,'NoCOMServer'))
 end
 end
 
+%% Check for dat again and abort if not avalable 
+if ~isstruct(RecordingStruct.Channel(ch).TransferEntropyCalculator)
+    logStr = ['Warning:NSB_SaveTransferEntropyData >> No Transfer Entropy Data found on channel ',num2str(ch), ':', datestr(now)];
+    NSBlog(LIMS.logfile, logStr);
+    disp(logStr);
+    logStr = ['Warning:NSB_SaveTransferEntropyData >> NSB_SaveTransferEntropyData terminated.'];
+    NSBlog(LIMS.logfile, logStr);
+    disp(logStr);
+    return;
+end
+
 %% generate Data Sheet
 %generate headers
 SheetHeader = ['Epoch No,Valid Epoch,Calendar Time,Bin Time,mean,optimal_k_history,NullMean,NullStd,Nullp'];
 SheetHeader = regexp(SheetHeader,'[\w\s\.]*','match');
 
 %Generate Tables
-EpochNumber = 1:size(RecordingStruct.Channel(chan).Spectrum,1); EpochNumber = EpochNumber(:); %RowVec
-BinTime = RecordingStruct.Channel(chan).Spectrum_ts(:);
-CalendarTime = datevec(RecordingStruct.StartDate);
-CalendarTime = datenum([repmat(CalendarTime(1:5),length(BinTime),1), BinTime+CalendarTime(6)]);
+if isfield(RecordingStruct.Channel(ch),'Spectrum')
+    %typically you would want to do both spectral and AIC/entropy
+    EpochNumber = 1:size(RecordingStruct.Channel(ch).Spectrum,1); EpochNumber = EpochNumber(:); %RowVec
+    BinTime = RecordingStruct.Channel(ch).Spectrum_ts(:);
+    CalendarTime = datevec(RecordingStruct.StartDate);
+    CalendarTime = datenum([repmat(CalendarTime(1:5),length(BinTime),1), BinTime+CalendarTime(6)]);
 
-DataTable = [EpochNumber,RecordingStruct.Channel(chan).Spectrum_validBins(:),CalendarTime,BinTime,...
-    RecordingStruct.Channel(chan).TransferEntropyCalculator.mean(:),...
-    RecordingStruct.Channel(chan).TransferEntropyCalculator.optimal_k_history(:),...
-    RecordingStruct.Channel(chan).TransferEntropyCalculator.NullMean(:),...
-    RecordingStruct.Channel(chan).TransferEntropyCalculator.NullStd(:),...
-    RecordingStruct.Channel(chan).TransferEntropyCalculator.Nullp(:)];
+    DataTable = [EpochNumber,RecordingStruct.Channel(ch).TransferEntropyCalculator.validBins(:),CalendarTime,BinTime,...
+        RecordingStruct.Channel(ch).TransferEntropyCalculator.mean(:),...
+        RecordingStruct.Channel(ch).TransferEntropyCalculator.optimal_k_history(:),...
+        RecordingStruct.Channel(ch).TransferEntropyCalculator.NullMean(:),...
+        RecordingStruct.Channel(ch).TransferEntropyCalculator.NullStd(:),...
+        RecordingStruct.Channel(ch).TransferEntropyCalculator.Nullp(:)];
+else
+    EpochNumber = 1:length(RecordingStruct.Channel(ch).TransferEntropyCalculator.mean); EpochNumber = EpochNumber(:); %RowVec
+    FinalTimeBinSize = options.parameters.PreClinicalFramework.SpectralAnalysis.FinalTimeResolution;
+    BinTime = [0:FinalTimeBinSize:length(EpochNumber)*FinalTimeBinSize]; %returns in seconds
+    BinTime = BinTime(1:length(EpochNumber));BinTime = BinTime(:);
+    CalendarTime = datevec(RecordingStruct.StartDate);
+    CalendarTime = datenum([repmat(CalendarTime(1:5),length(BinTime),1), BinTime+CalendarTime(6)]);
+
+    DataTable = [EpochNumber,RecordingStruct.Channel(ch).TransferEntropyCalculator.validBins(:), CalendarTime,BinTime,...
+        RecordingStruct.Channel(ch).TransferEntropyCalculator.mean(:),...
+        RecordingStruct.Channel(ch).TransferEntropyCalculator.optimal_k_history(:),...
+        RecordingStruct.Channel(ch).TransferEntropyCalculator.NullMean(:),...
+        RecordingStruct.Channel(ch).TransferEntropyCalculator.NullStd(:),...
+        RecordingStruct.Channel(ch).TransferEntropyCalculator.Nullp(:)];
+
+end
 
 [status,msg] = NSB_WriteGenericCSV(SheetHeader, fullfile(OutputDir,[OutputFile,'_TEData.csv']),false);
 [status,msg] = NSB_WriteGenericCSV(DataTable, fullfile(OutputDir,[OutputFile,'_TEData.csv']),true);
@@ -143,12 +172,12 @@ end
 if options.parameters.PreClinicalFramework.BioBookoutput
 %offset times in Windows Excel compatable manner
 CalendarTime = CalendarTime  - 693960;
-DataTable = [EpochNumber,RecordingStruct.Channel(chan).Spectrum_validBins(:),CalendarTime,BinTime,...
-    RecordingStruct.Channel(chan).TransferEntropyCalculator.mean(:),...
-    RecordingStruct.Channel(chan).TransferEntropyCalculator.optimal_k_history(:),...
-    RecordingStruct.Channel(chan).TransferEntropyCalculator.NullMean(:),...
-    RecordingStruct.Channel(chan).TransferEntropyCalculator.NullStd(:),...
-    RecordingStruct.Channel(chan).TransferEntropyCalculator.Nullp(:)];
+DataTable = [EpochNumber,RecordingStruct.Channel(ch).Spectrum_validBins(:),CalendarTime,BinTime,...
+    RecordingStruct.Channel(ch).TransferEntropyCalculator.mean(:),...
+    RecordingStruct.Channel(ch).TransferEntropyCalculator.optimal_k_history(:),...
+    RecordingStruct.Channel(ch).TransferEntropyCalculator.NullMean(:),...
+    RecordingStruct.Channel(ch).TransferEntropyCalculator.NullStd(:),...
+    RecordingStruct.Channel(ch).TransferEntropyCalculator.Nullp(:)];
 
 %now write sheet
 [status,msg] = NSB_WriteGenericCSV(MetaDataArray, fullfile(OutputDir,[OutputFile,'_TE_BioBook.csv']),false);
