@@ -57,27 +57,27 @@ if strcmpi(fcn,'add')
         
 
     elseif ismac
-        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/PreClinicalEEGFramework';
-        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/CommonFiles';
+        addpath '../PreClinicalEEGFramework';
+        addpath '../CommonFiles';
         if MatlabPost2014
-            addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/tinyXML2';
+            addpath '../ExternalToolBoxes/tinyXML2';
         else
-            addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/xml_toolbox';
+            addpath '../ExternalToolBoxes/xml_toolbox';
         end
-        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/son';
-        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/son/SON32';
-        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/fuf';
-        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/struct2xml';
-        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/Word';
-        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/ACQreader';
-        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/NPMK';
-        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/infodynamics';
-        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/infodynamics/utils';
-        javaaddpath('/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/ExternalToolBoxes/infodynamics/infodynamics.jar');
-        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/Importers';
-        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/Exporters';
-        addpath '/Volumes/homes/DevilbissLab/SourceCode/Cerridwen/SleepScoringToolbox';
-        addpath '/Volumes/Volume_1/UserData/NexStepBiomarkers/DataSpider';
+        addpath '../ExternalToolBoxes/son';
+        addpath '../ExternalToolBoxes/son/SON32';
+        addpath '../ExternalToolBoxes/fuf';
+        addpath '../ExternalToolBoxes/struct2xml';
+        addpath '../ExternalToolBoxes/Word';
+        addpath '../ExternalToolBoxes/ACQreader';
+        addpath '../ExternalToolBoxes/NPMK';
+        addpath '../ExternalToolBoxes/infodynamics';
+        addpath '../ExternalToolBoxes/infodynamics/utils';
+        javaaddpath('../ExternalToolBoxes/infodynamics/infodynamics.jar');
+        addpath '../Importers';
+        addpath '../Exporters';
+        addpath '../SleepScoringToolbox';
+        addpath '../DataSpider';
     elseif isunix
         addpath '/home/ddevilbiss/Diskstation/NSB_AnalyticFramework/PreClinicalEEGFramework';
         addpath '/home/ddevilbiss/Diskstation/NSB_AnalyticFramework/CommonFiles';

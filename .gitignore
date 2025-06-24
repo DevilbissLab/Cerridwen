@@ -18,3 +18,5 @@ Cerridwen_SoftwareLicences/
 *.asv
 
 ExternalToolBoxes/infodynamics_xl/
+
+.DS_Store

@@ -97,7 +97,7 @@ switch class(newStruct)
         NSBlog(oemStruct.PreClinicalFramework.LogFile,['Loading: ',newStruct]);
         if exist(newStruct,'file') == 2
             outStruct = [];
-            if oemStruct.PreClinicalFramework.MatlabPost2014
+            if oemStruct.PreClinicalFramework.MatlabPost2014 && ispc
                 outStruct = tinyxml2_wrap('load', newStruct);
             else
                 outStruct = xml_load(newStruct);

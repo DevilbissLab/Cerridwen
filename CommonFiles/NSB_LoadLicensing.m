@@ -27,6 +27,7 @@ NSBlog(LogFile,['Info:NSB_LoadLicensing >> License Found for ',LicenseStruct.Inf
      ' Group=',LicenseStruct.Info.Group,' User=',LicenseStruct.Info.User]);
 
  %Get Curent NIC
+NIC_Tokens = cell(0);
 if ispc
     [retVal, text] = system('ipconfig /all'); %<< licenceing
     PA_lines = strfind(text,'Physical Address');
@@ -37,8 +38,12 @@ if ispc
 elseif ismac
     [retVal, text] = system('netstat -I en0');
     PA_lines = strfind(text,'>');
+    if length(PA_lines) > 1
     for curNIC = 1:length(PA_lines)
         NIC_Tokens(curNIC) = regexp(text(PA_lines(curNIC):PA_lines(curNIC)+128),'[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}', 'match');
+    end
+    elseif length(PA_lines) == 1
+        NIC_Tokens{1} = regexp(text(PA_lines(1):end),'[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}', 'match');
     end
 end
 
