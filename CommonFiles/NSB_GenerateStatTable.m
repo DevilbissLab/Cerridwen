@@ -307,7 +307,7 @@ catch
     [status,msg] = NSB_WriteGenericCSV(SheetHeader, fullfile(outputPath, 'NSB_Cerridwen-SeizureStatisticalAnalysisTable.csv'),false);
 end
 % Active Info Storage (AIS) data tables
-AISFileHeader = ['Date,Subject,Channel Name,Channel Num,Manipulation,MeanAIS,optimal_k_history,NullMean,NullStd,Nullp'];
+AISFileHeader = ['Date,Subject,Channel Name,Channel Num,Manipulation,Epoch Num,Valid Epoch,Sleep Scoring,MeanAIS,optimal_k_history,NullMean,NullStd,Nullp'];
 AISFileHeader = regexp(AISFileHeader,'[/()\w\s\.]*','match');
 try
     [status,msg] = NSB_WriteGenericCSV(AISFileHeader, fullfile(outputPath, 'NSB_Cerridwen-AISStatisticalAnalysisTable.csv'),false);
@@ -317,7 +317,7 @@ catch
     [status,msg] = NSB_WriteGenericCSV(SheetHeader, fullfile(outputPath, 'NSB_Cerridwen-AISStatisticalAnalysisTable.csv'),false);
 end
 % Transfer Entropy (TE) data tables
-TEFileHeader = ['Date,Subject,Channel Name,Channel Num,Manipulation,MeanAIS,optimal_k_history,NullMean,NullStd,Nullp'];
+TEFileHeader = ['Date,Subject,Channel Name,Channel Num,Manipulation,Epoch Num,Valid Epoch,Sleep Scoring,MeanTE,optimal_k_history,NullMean,NullStd,Nullp'];
 TEFileHeader = regexp(TEFileHeader,'[/()\w\s\.]*','match');
 try
     [status,msg] = NSB_WriteGenericCSV(TEFileHeader, fullfile(outputPath, 'NSB_Cerridwen-TEStatisticalAnalysisTable.csv'),false);
@@ -1599,11 +1599,11 @@ for curRow = 2:DesignLength
                         %Write File
                         if options.progress, waitbar(1,h_chan,'Writing Spectral Data .CSV ... Please Wait.'); end
                         try
-                            [status,msg] = NSB_WriteGenericCSV(StatsSheet, fullfile(outputPath, 'NSB_Cerridwen-StatisticalAnalysisTable.csv'),true);
+                            [status,msg] = NSB_WriteGenericCSV(StatsSheet, fullfile(outputPath, 'NSB_Cerridwen-AISStatisticalAnalysisTable.csv'),true);
                         catch
-                            infostr = {'Warning: NSB_GenerateStatTable >> Cannot write NSB_Cerridwen-StatisticalAnalysisTable.';'Check that the file is not currently open and then press OK'};
+                            infostr = {'Warning: NSB_GenerateStatTable >> Cannot write NSB_Cerridwen-AISStatisticalAnalysisTable.';'Check that the file is not currently open and then press OK'};
                             uiwait(msgbox(infostr,'NSB_GenerateStatTable','warn','modal'));
-                            [status,msg] = NSB_WriteGenericCSV(StatsSheet, fullfile(outputPath, 'NSB_Cerridwen-StatisticalAnalysisTable.csv'),true);
+                            [status,msg] = NSB_WriteGenericCSV(StatsSheet, fullfile(outputPath, 'NSB_Cerridwen-AISStatisticalAnalysisTable.csv'),true);
                         end
                     end
                     if size(StatsSheet,2) > oldStatsSheetSize.AIS(2) || isnan(oldStatsSheetSize.AIS(2))
@@ -1634,11 +1634,11 @@ for curRow = 2:DesignLength
                         %Write File
                         if options.progress, waitbar(1,h_chan,'Writing Spectral Data .CSV ... Please Wait.'); end
                         try
-                            [status,msg] = NSB_WriteGenericCSV(StatsSheet, fullfile(outputPath, 'NSB_Cerridwen-StatisticalAnalysisTable.csv'),true);
+                            [status,msg] = NSB_WriteGenericCSV(StatsSheet, fullfile(outputPath, 'NSB_Cerridwen-TEStatisticalAnalysisTable.csv'),true);
                         catch
-                            infostr = {'Warning: NSB_GenerateStatTable >> Cannot write NSB_Cerridwen-StatisticalAnalysisTable.';'Check that the file is not currently open and then press OK'};
+                            infostr = {'Warning: NSB_GenerateStatTable >> Cannot write NSB_Cerridwen-TEStatisticalAnalysisTable.';'Check that the file is not currently open and then press OK'};
                             uiwait(msgbox(infostr,'NSB_GenerateStatTable','warn','modal'));
-                            [status,msg] = NSB_WriteGenericCSV(StatsSheet, fullfile(outputPath, 'NSB_Cerridwen-StatisticalAnalysisTable.csv'),true);
+                            [status,msg] = NSB_WriteGenericCSV(StatsSheet, fullfile(outputPath, 'NSB_Cerridwen-TEStatisticalAnalysisTable.csv'),true);
                         end
                     end
                     if size(StatsSheet,2) > oldStatsSheetSize.TE(2) || isnan(oldStatsSheetSize.TE(2))
@@ -1745,11 +1745,11 @@ for curRow = 2:DesignLength
                         %Write File
                         if options.progress, waitbar(1,h_chan,'Writing Spectral Data .CSV ... Please Wait.'); end
                         try
-                            [status,msg] = NSB_WriteGenericCSV(StatsSheet, fullfile(outputPath, 'NSB_Cerridwen-StatisticalAnalysisTable.csv'),true);
+                            [status,msg] = NSB_WriteGenericCSV(StatsSheet, fullfile(outputPath, 'NSB_Cerridwen-AISStatisticalAnalysisTable.csv'),true);
                         catch
-                            infostr = {'Warning: NSB_GenerateStatTable >> Cannot write NSB_Cerridwen-StatisticalAnalysisTable.';'Check that the file is not currently open and then press OK'};
+                            infostr = {'Warning: NSB_GenerateStatTable >> Cannot write NSB_Cerridwen-AISStatisticalAnalysisTable.';'Check that the file is not currently open and then press OK'};
                             uiwait(msgbox(infostr,'NSB_GenerateStatTable','warn','modal'));
-                            [status,msg] = NSB_WriteGenericCSV(StatsSheet, fullfile(outputPath, 'NSB_Cerridwen-StatisticalAnalysisTable.csv'),true);
+                            [status,msg] = NSB_WriteGenericCSV(StatsSheet, fullfile(outputPath, 'NSB_Cerridwen-AISStatisticalAnalysisTable.csv'),true);
                         end
                     end
                     if size(StatsSheet,2) > oldStatsSheetSize.AIS(2) || isnan(oldStatsSheetSize.AIS(2))
@@ -1783,11 +1783,11 @@ for curRow = 2:DesignLength
                         %Write File
                         if options.progress, waitbar(1,h_chan,'Writing Spectral Data .CSV ... Please Wait.'); end
                         try
-                            [status,msg] = NSB_WriteGenericCSV(StatsSheet, fullfile(outputPath, 'NSB_Cerridwen-StatisticalAnalysisTable.csv'),true);
+                            [status,msg] = NSB_WriteGenericCSV(StatsSheet, fullfile(outputPath, 'NSB_Cerridwen-TEStatisticalAnalysisTable.csv'),true);
                         catch
-                            infostr = {'Warning: NSB_GenerateStatTable >> Cannot write NSB_Cerridwen-StatisticalAnalysisTable.';'Check that the file is not currently open and then press OK'};
+                            infostr = {'Warning: NSB_GenerateStatTable >> Cannot write NSB_Cerridwen-TEStatisticalAnalysisTable.';'Check that the file is not currently open and then press OK'};
                             uiwait(msgbox(infostr,'NSB_GenerateStatTable','warn','modal'));
-                            [status,msg] = NSB_WriteGenericCSV(StatsSheet, fullfile(outputPath, 'NSB_Cerridwen-StatisticalAnalysisTable.csv'),true);
+                            [status,msg] = NSB_WriteGenericCSV(StatsSheet, fullfile(outputPath, 'NSB_Cerridwen-TEStatisticalAnalysisTable.csv'),true);
                         end
                     end
                     if size(StatsSheet,2) > oldStatsSheetSize.TE(2) || isnan(oldStatsSheetSize.TE(2))
