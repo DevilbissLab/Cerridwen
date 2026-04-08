@@ -830,7 +830,7 @@ for curRow = 2:DesignLength
                         DataStatus.AIS.Loaded = true;
                     end
                 else
-                    infostr = ['ERROR: NSB_GenerateStatTable >> AIS Data Not Loaded '];
+                    infostr = ['Warning: NSB_GenerateStatTable >> AIS Data Not Loaded '];
                     if ~isempty(options.logfile)
                         NSBlog(options.logfile,infostr);
                     else
@@ -838,7 +838,7 @@ for curRow = 2:DesignLength
                     end
                 end
             else
-                infostr = ['ERROR: NSB_GenerateStatTable >> AIS Data Not Loaded '];
+                infostr = ['Warning: NSB_GenerateStatTable >> AIS Data Not Loaded '];
                 if ~isempty(options.logfile)
                     NSBlog(options.logfile,infostr);
                 else
@@ -869,7 +869,7 @@ for curRow = 2:DesignLength
                     NSBlog(options.logfile,infostr);
                 end
                 if isempty(DataStatus.TE.Data)
-                    infostr = ['ERROR: NSB_GenerateStatTable >> No Data in File: ', fullfile(DataFolderPath,'NSB_Output',SubjectAISFileList{SubjectAISFileChannelList_IDX(curChan)}), 'Skipping Channel.'];
+                    infostr = ['Warning: NSB_GenerateStatTable >> No Data in File: ', fullfile(DataFolderPath,'NSB_Output',SubjectAISFileList{SubjectAISFileChannelList_IDX(curChan)}), 'Skipping Channel.'];
                     if ~isempty(options.logfile)
                         NSBlog(options.logfile,infostr);
                     else
@@ -883,7 +883,7 @@ for curRow = 2:DesignLength
                     DataStatus.TE.Loaded = true;
                 end
             else
-                infostr = ['ERROR: NSB_GenerateStatTable >> TE Data Not Loaded '];
+                infostr = ['Warning: NSB_GenerateStatTable >> TE Data Not Loaded '];
                 if ~isempty(options.logfile)
                     NSBlog(options.logfile,infostr);
                 else
@@ -1003,14 +1003,15 @@ for curRow = 2:DesignLength
                 if DataStatus.Spectral.Loaded
                     DataStatus.Spectral.PivotRow = find(DataStatus.Spectral.Data(:,3) >= DoseTime, 1 ,'first'); %EEG Spreadsheet, date num is col 3
                     DataStatus.Spectral.PivotEpoch = DataStatus.Spectral.Data(DataStatus.Spectral.PivotRow,4); % EEG Spreadsheet, seconds is col 4
-                    infostr = ['Info: NSB_GenerateStatTable >> "Dosing Time" found for Spectral Spreadsheet. '];
-                    disp(infostr);
-                    if ~isempty(options.logfile)
-                        NSBlog(options.logfile,infostr);
-                    end
+                    
                     if DataStatus.Spectral.PivotRow > 1
                         % Recalculate Timebase
                         DataStatus.Spectral.Data(:,4) = DataStatus.Spectral.Data(:,4) - DataStatus.Spectral.PivotEpoch;
+                        infostr = ['Info: NSB_GenerateStatTable >> "Dosing Time" found for Spectral Spreadsheet. '];
+                        disp(infostr);
+                        if ~isempty(options.logfile)
+                            NSBlog(options.logfile,infostr);
+                        end
                     else
                         % There is no baseline data
                         DoseTime = NaN; % Reset DoseTime since there is no baseline data.
@@ -1038,14 +1039,15 @@ for curRow = 2:DesignLength
                 if DataStatus.AIS.Loaded
                     DataStatus.AIS.PivotRow = find(DataStatus.AIS.Data(:,3) >= DoseTime, 1 ,'first'); %AIS Spreadsheet, date num is col 3
                     DataStatus.AIS.PivotEpoch = DataStatus.AIS.Data(DataStatus.AIS.PivotRow,4); % AIS Spreadsheet, seconds is col 4
-                    infostr = ['Info: NSB_GenerateStatTable >> "Dosing Time" found for AIS Spreadsheet. '];
-                    disp(infostr);
-                    if ~isempty(options.logfile)
-                        NSBlog(options.logfile,infostr);
-                    end
+                    
                     if DataStatus.AIS.PivotRow > 1
                         % Recalculate Timebase
                         DataStatus.AIS.Data(:,4) = DataStatus.AIS.Data(:,4) - DataStatus.AIS.PivotEpoch;
+                        infostr = ['Info: NSB_GenerateStatTable >> "Dosing Time" found for AIS Spreadsheet. '];
+                        disp(infostr);
+                        if ~isempty(options.logfile)
+                            NSBlog(options.logfile,infostr);
+                        end
                     else
                         % There is no baseline data
                         DoseTime = NaN; % Reset DoseTime since there is no baseline data.
@@ -1073,14 +1075,15 @@ for curRow = 2:DesignLength
                 if DataStatus.TE.Loaded
                     DataStatus.TE.PivotRow = find(DataStatus.TE.Data(:,3) >= DoseTime, 1 ,'first'); %AIS Spread sheet, date num is col 3
                     DataStatus.TE.PivotEpoch = DataStatus.TE.Data(DataStatus.TE.PivotRow,4); % %AIS Spread sheet, seconds is col 4
-                    infostr = ['Info: NSB_GenerateStatTable >> "Dosing Time" found for TE Spreadsheet. '];
-                    disp(infostr);
-                    if ~isempty(options.logfile)
-                        NSBlog(options.logfile,infostr);
-                    end
+                    
                     if DataStatus.TE.PivotRow > 1
                         % Recalculate Timebase
                         DataStatus.TE.Data(:,4) = DataStatus.TE.Data(:,4) - DataStatus.TE.PivotEpoch;
+                        infostr = ['Info: NSB_GenerateStatTable >> "Dosing Time" found for TE Spreadsheet. '];
+                        disp(infostr);
+                        if ~isempty(options.logfile)
+                            NSBlog(options.logfile,infostr);
+                        end
                     else
                         % There is no baseline data
                         DoseTime = NaN; % Reset DoseTime since there is no baseline data.
@@ -1107,12 +1110,26 @@ for curRow = 2:DesignLength
                 %if ~isempty(DataStatus.Sleep.Data)
                 if DataStatus.Sleep.Loaded
                     DataStatus.Sleep.PivotRow = find(DataStatus.Sleep.Data(:,2) >= DoseTime, 1 ,'first'); %Hypnogram Spread sheet, date num is col 3 (no Valid Marker)
-                    DataStatus.Sleep.PivotEpoch = DataStatus.Sleep.Data(DataStatus.Sleep.PivotRow,3);
-                    DataStatus.Sleep.Data(:,3) = DataStatus.Sleep.Data(:,3) - DataStatus.Sleep.PivotEpoch;
-                    infostr = ['Info: NSB_GenerateStatTable >> "Dosing Time" found for Sleep Scoring Spreadsheet. '];
-                    disp(infostr);
-                    if ~isempty(options.logfile)
-                        NSBlog(options.logfile,infostr);
+                    DataStatus.Sleep.PivotEpoch = DataStatus.Sleep.Data(DataStatus.Sleep.PivotRow,3);                    
+                    
+                    if DataStatus.Sleep.PivotRow > 1
+                        % Recalculate Timebase
+                        DataStatus.Sleep.Data(:,3) = DataStatus.Sleep.Data(:,3) - DataStatus.Sleep.PivotEpoch;
+                        infostr = ['Info: NSB_GenerateStatTable >> "Dosing Time" found for Sleep Scoring Spreadsheet. '];
+                        disp(infostr);
+                        if ~isempty(options.logfile)
+                            NSBlog(options.logfile,infostr);
+                        end
+                    else
+                        % There is no baseline data
+                        DoseTime = NaN; % Reset DoseTime since there is no baseline data.
+                        infostr = ['Info: NSB_GenerateStatTable >> No Baseline data found for Sleep Scoring Spreadsheet. '];
+                        disp(infostr);
+                        if ~isempty(options.logfile)
+                            NSBlog(options.logfile,infostr);
+                        else
+                            errordlg(infostr,'NSB_GenerateStatTable','replace');
+                        end
                     end
                     disp('... Somnogram Spreadsheet Processed.');
                     % Processed = PivotEpoch not empty

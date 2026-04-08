@@ -32,7 +32,11 @@ if ispc
     [retVal, text] = system('ipconfig /all'); %<< licenceing
     PA_lines = strfind(text,'Physical Address');
     for curNIC = 1:length(PA_lines)
-        NIC_Tokens(curNIC) = regexp(text(PA_lines(curNIC):PA_lines(curNIC)+128),'[0-9A-F]{2}+-[0-9A-F]{2}+-[0-9A-F]{2}+-[0-9A-F]{2}+-[0-9A-F]{2}+-[0-9A-F]{2}', 'match');
+       NIC_STR = regexp(text(PA_lines(curNIC):PA_lines(curNIC)+128),'[0-9A-F]{2}+-[0-9A-F]{2}+-[0-9A-F]{2}+-[0-9A-F]{2}+-[0-9A-F]{2}+-[0-9A-F]{2}', 'match');
+        if ~isempty(NIC_STR)
+        NSBlog(LogFile,['Info:NSB_LoadLicensing >> Found NIC ',NIC_STR]);
+        NIC_Tokens(curNIC) = NIC_STR;
+        end
     end
     
 elseif ismac
@@ -40,7 +44,11 @@ elseif ismac
     PA_lines = strfind(text,'>');
     if length(PA_lines) > 1
     for curNIC = 1:length(PA_lines)
-        NIC_Tokens(curNIC) = regexp(text(PA_lines(curNIC):PA_lines(curNIC)+128),'[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}', 'match');
+        NIC_STR = regexp(text(PA_lines(curNIC):PA_lines(curNIC)+128),'[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}', 'match');
+        if ~isempty(NIC_STR)
+        NSBlog(LogFile,['Info:NSB_LoadLicensing >> Found NIC ',NIC_STR]);
+        NIC_Tokens(curNIC) = NIC_STR;
+        end
     end
     elseif length(PA_lines) == 1
         NIC_Tokens{1} = regexp(text(PA_lines(1):end),'[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}+:[0-9A-Fa-f]{2}', 'match');
@@ -200,6 +208,10 @@ if isempty(NIC_Tokens)
     return;
 end
 ValidNIC = upper(NIC_Tokens{nNIC});
+if iscell(ValidNIC)
+    %MAC sometimes delivers cell in a cell
+    ValidNIC = upper(ValidNIC{nNIC});
+end
 PrimeKey = regexprep(num2str(uint8(ValidNIC)),'\s','');
 
 %Generate PassCode for Framework
