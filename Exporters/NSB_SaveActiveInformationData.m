@@ -115,20 +115,22 @@ SheetHeader = ['Epoch No,Valid Epoch,Calendar Time,Bin Time,mean,optimal_k_histo
 SheetHeader = regexp(SheetHeader,'[\w\s\.]*','match');
 
 %Generate Tables
-if isfield(RecordingStruct.Channel(chan),'Spectrum')
-    %typically you would want to do both spectral and AIC/entropy
-    EpochNumber = 1:size(RecordingStruct.Channel(chan).Spectrum,1); EpochNumber = EpochNumber(:); %RowVec
-    BinTime = RecordingStruct.Channel(chan).Spectrum_ts(:);
-    CalendarTime = datevec(RecordingStruct.StartDate);
-    CalendarTime = datenum([repmat(CalendarTime(1:5),length(BinTime),1), BinTime+CalendarTime(6)]);
-
-    DataTable = [EpochNumber,RecordingStruct.Channel(chan).ActiveInformationCalculator.validBins(:),CalendarTime,BinTime,...
-        RecordingStruct.Channel(chan).ActiveInformationCalculator.mean(:),...
-        RecordingStruct.Channel(chan).ActiveInformationCalculator.optimal_k_history(:),...
-        RecordingStruct.Channel(chan).ActiveInformationCalculator.NullMean(:),...
-        RecordingStruct.Channel(chan).ActiveInformationCalculator.NullStd(:),...
-        RecordingStruct.Channel(chan).ActiveInformationCalculator.Nullp(:)];
-else
+%Handle like NSB_SaveSomnogramData (Don't try to match analysis lengths)
+%Trimming will occur when joining tables
+% if isfield(RecordingStruct.Channel(chan),'Spectrum')
+%     %typically you would want to do both spectral and AIC/entropy
+%     EpochNumber = 1:size(RecordingStruct.Channel(chan).Spectrum,1); EpochNumber = EpochNumber(:); %RowVec
+%     BinTime = RecordingStruct.Channel(chan).Spectrum_ts(:);
+%     CalendarTime = datevec(RecordingStruct.StartDate);
+%     CalendarTime = datenum([repmat(CalendarTime(1:5),length(BinTime),1), BinTime+CalendarTime(6)]);
+% 
+%     DataTable = [EpochNumber,RecordingStruct.Channel(chan).ActiveInformationCalculator.validBins(:),CalendarTime,BinTime,...
+%         RecordingStruct.Channel(chan).ActiveInformationCalculator.mean(:),...
+%         RecordingStruct.Channel(chan).ActiveInformationCalculator.optimal_k_history(:),...
+%         RecordingStruct.Channel(chan).ActiveInformationCalculator.NullMean(:),...
+%         RecordingStruct.Channel(chan).ActiveInformationCalculator.NullStd(:),...
+%         RecordingStruct.Channel(chan).ActiveInformationCalculator.Nullp(:)];
+% else
     EpochNumber = 1:length(RecordingStruct.Channel(chan).ActiveInformationCalculator.mean); EpochNumber = EpochNumber(:); %RowVec
     FinalTimeBinSize = options.parameters.PreClinicalFramework.SpectralAnalysis.FinalTimeResolution;
     BinTime = [0:FinalTimeBinSize:length(EpochNumber)*FinalTimeBinSize]; %returns in seconds
@@ -143,7 +145,7 @@ else
         RecordingStruct.Channel(chan).ActiveInformationCalculator.NullStd(:),...
         RecordingStruct.Channel(chan).ActiveInformationCalculator.Nullp(:)];
 
-end
+% end
 
 [status,msg] = NSB_WriteGenericCSV(SheetHeader, fullfile(OutputDir,[OutputFile,'_AISData.csv']),false);
 [status,msg] = NSB_WriteGenericCSV(DataTable, fullfile(OutputDir,[OutputFile,'_AISData.csv']),true);

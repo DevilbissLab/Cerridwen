@@ -131,20 +131,22 @@ SheetHeader = ['Epoch No,Valid Epoch,Calendar Time,Bin Time,mean,optimal_k_histo
 SheetHeader = regexp(SheetHeader,'[\w\s\.]*','match');
 
 %Generate Tables
-if isfield(RecordingStruct.Channel(ch),'Spectrum')
-    %typically you would want to do both spectral and AIC/entropy
-    EpochNumber = 1:size(RecordingStruct.Channel(ch).Spectrum,1); EpochNumber = EpochNumber(:); %RowVec
-    BinTime = RecordingStruct.Channel(ch).Spectrum_ts(:);
-    CalendarTime = datevec(RecordingStruct.StartDate);
-    CalendarTime = datenum([repmat(CalendarTime(1:5),length(BinTime),1), BinTime+CalendarTime(6)]);
-
-    DataTable = [EpochNumber,RecordingStruct.Channel(ch).TransferEntropyCalculator.validBins(:),CalendarTime,BinTime,...
-        RecordingStruct.Channel(ch).TransferEntropyCalculator.mean(:),...
-        RecordingStruct.Channel(ch).TransferEntropyCalculator.optimal_k_history(:),...
-        RecordingStruct.Channel(ch).TransferEntropyCalculator.NullMean(:),...
-        RecordingStruct.Channel(ch).TransferEntropyCalculator.NullStd(:),...
-        RecordingStruct.Channel(ch).TransferEntropyCalculator.Nullp(:)];
-else
+%Handle like NSB_SaveSomnogramData (Don't try to match analysis lengths)
+%Trimming will occur when joining tables
+% if isfield(RecordingStruct.Channel(ch),'Spectrum')
+%     %typically you would want to do both spectral and AIC/entropy
+%     EpochNumber = 1:size(RecordingStruct.Channel(ch).Spectrum,1); EpochNumber = EpochNumber(:); %RowVec
+%     BinTime = RecordingStruct.Channel(ch).Spectrum_ts(:);
+%     CalendarTime = datevec(RecordingStruct.StartDate);
+%     CalendarTime = datenum([repmat(CalendarTime(1:5),length(BinTime),1), BinTime+CalendarTime(6)]);
+% 
+%     DataTable = [EpochNumber,RecordingStruct.Channel(ch).TransferEntropyCalculator.validBins(:),CalendarTime,BinTime,...
+%         RecordingStruct.Channel(ch).TransferEntropyCalculator.mean(:),...
+%         RecordingStruct.Channel(ch).TransferEntropyCalculator.optimal_k_history(:),...
+%         RecordingStruct.Channel(ch).TransferEntropyCalculator.NullMean(:),...
+%         RecordingStruct.Channel(ch).TransferEntropyCalculator.NullStd(:),...
+%         RecordingStruct.Channel(ch).TransferEntropyCalculator.Nullp(:)];
+% else
     EpochNumber = 1:length(RecordingStruct.Channel(ch).TransferEntropyCalculator.mean); EpochNumber = EpochNumber(:); %RowVec
     FinalTimeBinSize = options.parameters.PreClinicalFramework.SpectralAnalysis.FinalTimeResolution;
     BinTime = [0:FinalTimeBinSize:length(EpochNumber)*FinalTimeBinSize]; %returns in seconds
@@ -159,7 +161,7 @@ else
         RecordingStruct.Channel(ch).TransferEntropyCalculator.NullStd(:),...
         RecordingStruct.Channel(ch).TransferEntropyCalculator.Nullp(:)];
 
-end
+% end
 
 [status,msg] = NSB_WriteGenericCSV(SheetHeader, fullfile(OutputDir,[OutputFile,'_TEData.csv']),false);
 [status,msg] = NSB_WriteGenericCSV(DataTable, fullfile(OutputDir,[OutputFile,'_TEData.csv']),true);

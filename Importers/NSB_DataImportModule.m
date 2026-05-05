@@ -106,6 +106,11 @@ switch lower(fileinfo.type)
                 if ~isempty(options.subjectID)
                     DataStruct.SubjectID = options.subjectID;
                     infostr = ['Warning: NSB_DataImportModule >> SubjectID not found in NEX header. Study Design .xls SubjectID will be used for SubjectID field.'];
+                    if ~isempty(options.logfile)
+                       NSBlog(options.logfile,infostr);
+                    else
+                       disp(infostr);
+                    end
                 end
             end
             
