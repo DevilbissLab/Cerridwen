@@ -4,7 +4,7 @@ function status = NSBlog(LogFileName,LogStr)
 % Fast attemt at this 
 
 try
-fid = fopen(LogFileName,'at');
+fid = fopen(LogFileName,'at+');
 if iscellstr(LogStr)
     for i=1:length(LogStr)
         fprintf(fid, '%s\n',LogStr{i});
@@ -13,6 +13,7 @@ else
     fprintf(fid, '%s\n',LogStr);
 end
 fclose(fid);
+fid = -1;
 status = true;
 catch
     status = false;
