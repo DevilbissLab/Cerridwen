@@ -2,7 +2,7 @@ function [status, outputParms, msg] = NSB_ParameterHandler(action, oemStruct, mu
 % [status, outputParms, msg] = NSB_ParameterHandler(action, oemStruct, mutableVar)
 %
 % Inputs:
-%   action                  - (string) 'New', 'Merge', 'Save' 
+%   action                  - (string) 'New', 'Merge', 'Save', 'mergeExtAnalysisParms' 
 %   oemStruct               - (struct) from NSB_ParameterFile() or fully constituted reference structure
 %   mutableVar              - (string, struct) Filepath+name to .xml or structure to merge into oemStruct
 %
@@ -54,39 +54,74 @@ switch (lower(action))
     case 'new'
         outputParms = NSB_ParameterFile();
         status = true;
-    case {'merge','mergeextanalysisparms'}
+    case 'merge'
+        %This is used by PreclinicalEEGFramework
         %load new struct (may be filename or struct)
         mutableVar = loadStruct(oemStruct, mutableVar);
         % One issue is that the incoming structure may be a substructure of
         % oemStruct and mostlikely the PreClinicalFramework structure
         if numel(fieldnames(oemStruct)) >= numel(fieldnames(mutableVar))
-            %if oemStruct has mor fields then merge into
+            %if oemStruct has more fields then merge into
             [outputParms, status, msg] = doMerge(action, oemStruct, mutableVar);
+            msg = ['ParameterHandler >> Parameter structures merged. ',msg];
         elseif isfield(oemStruct,'PreClinicalFramework') && isfield(mutableVar,'ArtifactDetection')
                 %merge PreClinicalFramework
                 outputParms = oemStruct;
                 [outputParms.PreClinicalFramework, status, msg] = doMerge(action, oemStruct.PreClinicalFramework, mutableVar);
-
+                msg = ['ParameterHandler >> PreClinicalFramework structures merged. ',msg];
         elseif isfield(oemStruct,'DataSpider') && isfield(mutableVar,'dbFN')
                 %merge PreClinicalFramework
                 outputParms = oemStruct;
-                [outputParms.DataSpider, status, msg] = doMerge(action, oemStruct.DataSpider, mutableVar);     
+                [outputParms.DataSpider, status, msg] = doMerge(action, oemStruct.DataSpider, mutableVar);
+                msg = ['ParameterHandler >> PreClinicalFramework structures merged. ',msg];
         else
             msg = ['ERROR: ParameterHandler >> Incompatable Parameter structures for merging.'];
         end
+
         if ~status
-                try, NSBlog(oemStruct.PreClinicalFramework.LogFile, msg); end
-                errordlg(msg,'ParameterHandler');
+            try, NSBlog(oemStruct.PreClinicalFramework.LogFile, msg); end
+            errordlg(msg,'ParameterHandler');
+        end
+    case 'mergeextanalysisparms'
+        %This is used by NSB_Workflow_LIMS to update file specific params
+        %load new struct (may be filename or struct)
+        mutableVar = loadStruct(oemStruct, mutableVar);
+        % One issue is that the incoming structure may be a substructure of
+        % oemStruct and mostlikely the PreClinicalFramework structure
+        if numel(fieldnames(oemStruct)) >= numel(fieldnames(mutableVar))
+            %if oemStruct has more fields then merge into
+            [outputParms, status, msg] = doMerge(action, oemStruct, mutableVar);
+            msg = ['ParameterHandler >> Parameter structures merged. ',msg];
+        elseif isfield(oemStruct,'PreClinicalFramework') && isfield(mutableVar,'ArtifactDetection')
+                %merge PreClinicalFramework
+                outputParms = oemStruct;
+                [outputParms.PreClinicalFramework, status, msg] = doMerge(action, oemStruct.PreClinicalFramework, mutableVar);
+                msg = ['ParameterHandler >> PreClinicalFramework structures merged. ',msg];
+        elseif isfield(oemStruct,'DataSpider') && isfield(mutableVar,'dbFN')
+                %merge PreClinicalFramework
+                outputParms = oemStruct;
+                [outputParms.DataSpider, status, msg] = doMerge(action, oemStruct.DataSpider, mutableVar);
+                msg = ['ParameterHandler >> PreClinicalFramework structures merged. ',msg];
+        else
+            if numel(fieldnames(oemStruct)) < numel(fieldnames(mutableVar))
+            %if oemStruct has LESS fields then merge into
+            [outputParms, status, msg] = doMerge(action, oemStruct, mutableVar);
+            msg = ['WARNING: ParameterHandler >> Parameter structures merged. ',msg];
+            else
+            msg = ['ERROR: ParameterHandler >> Incompatable Parameter structures for merging.'];
+            end
+        end
+
+        try, NSBlog(oemStruct.PreClinicalFramework.LogFile, msg); end
+        if ~status
+            errordlg(msg,'ParameterHandler');
         end
     case 'save'
-
-
-
-
+        % To Do
     otherwise
-        errorstr = ['ERROR: ParameterHandler >> Invalid parameter manipulation command.'];
-        try, NSBlog(oemStruct.PreClinicalFramework.LogFile,errorstr); end
-        errordlg(errorstr,'ParameterHandler');
+        msg = ['ERROR: ParameterHandler >> Invalid parameter manipulation command.'];
+        try, NSBlog(oemStruct.PreClinicalFramework.LogFile,msg); end
+        errordlg(msg,'ParameterHandler');
 end
 
 
@@ -124,12 +159,14 @@ end
 function [oemStruct, status, msg] = doMerge(action, oemStruct, mergeStruct)
 status = false; msg = [];
 thisFields = fieldnames(oemStruct);
+thatFields = fieldnames(mergeStruct);
 
 for nFields = 1:length(thisFields)
     try
         if ~isProtectedField(action, thisFields{nFields} )
             if isfield(oemStruct,thisFields{nFields}) && isfield(mergeStruct,thisFields{nFields})
                 if isstruct( oemStruct.(thisFields{nFields}) )
+                    %itirate into substructure
                     [oemStruct.(thisFields{nFields}), status, msg2] = doMerge(action, oemStruct.(thisFields{nFields}), mergeStruct.(thisFields{nFields}));
                     if ~status
                         %Use deal to overwrite each element in the list
@@ -141,7 +178,7 @@ for nFields = 1:length(thisFields)
                 end
             else
                 % isfield(oemStruct,thisFields{nFields}) only
-                msg = [msg, ' Warning: NSB_ParameterHandler:doMerge >> Parameter: ',thisFields{nFields},', cannot be updated'];
+                msg = [msg, thisFields{nFields},', cannot be updated. '];
             end
         end
 
@@ -152,6 +189,11 @@ for nFields = 1:length(thisFields)
             msg = [msg,' Function: ',ME.stack(1).name,' Line # ',num2str(ME.stack(1).line)];
         end
     end
+end
+
+diffFields = [setdiff(thisFields, thatFields); setdiff(thatFields, thisFields)];
+for nFields = 1:length(diffFields)
+    msg = [msg, diffFields{nFields},' cannot be updated. '];
 end
 
 function status = isProtectedField(action, fieldName)
