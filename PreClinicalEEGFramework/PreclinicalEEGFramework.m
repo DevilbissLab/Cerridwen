@@ -859,6 +859,10 @@ if status
             if ~strcmpi(LogPath,handles.parameters.PreClinicalFramework.OutputDir)
             NewLogPath = fullfile(handles.parameters.PreClinicalFramework.OutputDir,[logName,LogExt]);
             movefile(handles.parameters.PreClinicalFramework.LogFile, NewLogPath);
+
+            handles.parameters.PreClinicalFramework.LogFile = NewLogPath;
+            NSBlog(handles.parameters.PreClinicalFramework.LogFile,['Log file moved to: ',NewLogPath]);
+
             end
         end
     end

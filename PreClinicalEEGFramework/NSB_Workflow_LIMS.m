@@ -151,8 +151,6 @@ if ~isempty(LIMS.StudyDesign)
 
                         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                         % Update ONLY the artifact detection.
-                        [status, LIMS.PreClinicalFramework.ArtifactDetection, msg] = NSB_ParameterHandler('mergeExtAnalysisParms', LIMS.PreClinicalFramework.ArtifactDetection, DynParamGUIStruct.ArtifactDetection);
-
                         NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ...Updating/using artifact detection parameters from: ', LIMS.StudyDesign{curFile}.AnalysisChan(1).ParamsFile]);
                         NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ...Reference Channel will be taken from Study Design if it exists']);
 
@@ -161,6 +159,15 @@ if ~isempty(LIMS.StudyDesign)
 
                         NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ...All remaining parameters will not be altered']);
                         LIMS.usingUniqueParmsFiles = true;
+
+                        [status, LIMS.PreClinicalFramework.ArtifactDetection, msg] = NSB_ParameterHandler('mergeExtAnalysisParms', LIMS.PreClinicalFramework.ArtifactDetection, DynParamGUIStruct.ArtifactDetection);
+                        if status
+                            NSBlog(LIMS.logfile, msg);
+                        else
+                            NSBlog(LIMS.logfile, 'Warning: NSB_Workflow_LIMS >> NSB_ParameterHandler Failed');
+                            NSBlog(LIMS.logfile, msg);
+                        end
+
                     else
                         NSBlog(LIMS.logfile,['Warning: NSB_Workflow_LIMS >> Parameter .xml not found (using initial parameters from GUI): ',LIMS.StudyDesign{curFile}.AnalysisChan(1).ParamsFile]);
                         %If a unique param file was loaded and there is not one... load the default
