@@ -1,0 +1,23 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Cerridwen
+message: 'If you use this software, please cite it as below.'
+type: software
+authors:
+  - given-names: David
+    name-particle: M.
+    family-names: Devilbiss
+    name-suffix: Ph.D.
+    email: devilbiss@rowan.edu
+    affiliation: Rowan University
+    orcid: 'https://orcid.org/0000-0002-7237-5720'
+identifiers:
+  - type: url
+    value: 'https://github.com/DevilbissLab/Cerridwen'
+repository-code: 'https://github.com/DevilbissLab/Cerridwen'
+url: 'https://github.com/DevilbissLab'
+commit: 45397d5
+version: v.3.30
+date-released: '2026-06-08'
