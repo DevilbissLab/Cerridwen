@@ -124,6 +124,7 @@ switch nargin
         options.Scoring.zDeltaThreshold = 0.1;
         options.Scoring.FFTvalidData = 50;
         options.Scoring.plot = true;
+        options.Scoring.plotTitle = '';
         % GMM starting point
         options.Scoring.useGMMinit = true;
         options.Scoring.force5GMMclusters = false;
@@ -152,6 +153,12 @@ switch nargin
         if ~isfield(options.Scoring,'zDeltaThreshold'), options.Scoring.zDeltaThreshold = 0.1;inputError = true; end
         if ~isfield(options.Scoring,'FFTvalidData'), options.Scoring.FFTvalidData = 50;inputError = true; end
         if ~isfield(options.Scoring,'plot'), options.Scoring.plot = true;inputError = true; end
+        if ~isfield(options.Scoring,'plotTitle')
+            if ~isfield(options.ArtifactDetection,'plotTitle')
+                options.Scoring.plotTitle = '';inputError = true;
+            else
+                [~, fName,fExt] = fileparts(options.ArtifactDetection.plotTitle{1}); options.Scoring.plotTitle = strcat(fName,fExt); end
+        else [~, fName,fExt] = fileparts(options.Scoring.plotTitle{1}); options.Scoring.plotTitle = strcat(fName,fExt); end
         % GMM starting point
         if ~isfield(options.Scoring,'useGMMinit'), options.Scoring.useGMMinit = true;inputError = true; end
         if ~isfield(options.Scoring,'force5GMMclusters'), options.Scoring.force5GMMclusters = false;inputError = true; end
@@ -277,14 +284,14 @@ if options.Scoring.plot
     %Create Spectrogram
     h_fig = figure;
     ax(1) = subplot(2,1,1);
-    ph = plot(ax(1),EEG.Data);
+    ph_sig = plot(ax(1),EEG.Data);
     ts = 0:EEG.Hz:length(EEG.Data) / EEG.Hz / 60;
     set(ax(1),'XLim',[0 length(EEG.Data)]);
     if ts(end) <= 60
         if options.MatlabPost2014
             xlabel(ax(1),'Time (mins)');
         else
-            xlabel(ph,'String','Time (mins)');
+            xlabel(ph_sig,'String','Time (mins)');
         end
         set(ax(1),'XTick',ts*60*EEG.Hz)
         set(ax(1),'XTickLabel',ts);
@@ -293,25 +300,26 @@ if options.Scoring.plot
         if options.MatlabPost2014
             xlabel(ax(1),'Time (hours)');
         else
-            xlabel(ph,'String','Time (hours)');
+            xlabel(ph_sig,'String','Time (hours)');
         end
         set(ax(1),'XTick',ts*60*60*EEG.Hz)
         set(ax(1),'XTickLabel',ts);
     end
+    title(options.Scoring.plotTitle,'FontWeight','bold','Interpreter', 'none');
     if ~isempty(EMG)
         hold on;
         plot(ax(1),EMG.Data + 3);
         legend('EEG','EMG');
-        title(ax(1),{'Hypnogram'; ['EEG-Ch',num2str(EEG.ChNumber), ' ',EEG.Name,...
-            ' EMG-Ch',num2str(EMG.ChNumber), ' ',EMG.Name]});
+        title(ax(1),{'Hypnogram'; options.Scoring.plotTitle; ['EEG-Ch',num2str(EEG.ChNumber), ' ',EEG.Name,...
+            ' EMG-Ch',num2str(EMG.ChNumber), ' ',EMG.Name]},'Interpreter', 'none');
     else
-        title(ax(1),{'Hypnogram'; ['EEG-Ch',num2str(EEG.ChNumber), ' ',EEG.Name,...
-            ' No EMG Found.']});
+        title(ax(1),{'Hypnogram'; options.Scoring.plotTitle; ['EEG-Ch',num2str(EEG.ChNumber), ' ',EEG.Name,...
+            ' No EMG Found.']},'Interpreter', 'none');
     end
     if options.MatlabPost2014
         ylabel(ax(1),EEG.Units);
     else
-        ylabel(ph,'String',EEG.Units);
+        ylabel(ph_sig,'String',EEG.Units);
     end
 end
 
@@ -692,7 +700,7 @@ switch upper(ScoringType)
         
         warning off;
         TotalNumClusters = 5;
-        ChiCDF = [];
+        ChiCDF = []; idx = [];
         BIC=ones(1,TotalNumClusters) * NaN;
         if options.Scoring.useGMMinit %< Option 1 using initialization parameters for 5 states
             try
@@ -756,7 +764,7 @@ switch upper(ScoringType)
             if ~isempty(ChiCDF)
                 [minBIC,minnumComponents] = min(BIC);
                 disp(['Final GMM Cluster Size = ',num2str(minnumComponents)]);
-                if minnumComponents >= 5         % <<<< finds break point in BIC curve (Scree test) to choose the number of states when over 5 states
+                if minnumComponents > 5         % <<<< finds break point in BIC curve (Scree test) to choose the number of states when over 5 states
                     for j=2:TotalNumClusters
                         if length(BIC) >= 10
                             ypredict=detrend(BIC(2:10),'linear',[j-1]);
@@ -780,12 +788,13 @@ switch upper(ScoringType)
             catch ME
                 errorstr = ['Error: NSB_SleepScoring >> GMM cannot generate even 1 Cluster - Failed ',ME.message];
                 if ~isempty(options.LogFile)
-                    NSBlog(options.LogFile,errorstr);
+                    NSBlog(options.LogFile,errorstr); 
+                    disp(errorstr);
                 else
                     errordlg(errorstr,'NSB_SleepScoring');
                 end
                 %idx = zeros(1,size(rebinPSD,1));
-                return; %Scoring a dead channel has issues and throws errors
+                %return; %Scoring a dead channel has issues and throws errors
             end
         end
         
@@ -811,10 +820,11 @@ switch upper(ScoringType)
         StateLookup(:,3) = num2cell(ones(1,6)*NaN);
 
         % AASM 2026 v3
+        if ~isempty(meanSpectra)
         %[N3idx,N1idx,QWidx,Widx,Ridx] = deal(NaN);
         %N3 0.5-2Hz that are > 20% of the 30 sec epoch
-        [DeltaSort, N3idx] = sortrows(meanSpectra,[-2 -3],'MissingPlacement','last'); %N3 sort in decending order by delta power
-        if sum(DeltaSort(N3idx(1),2:3),2) > sum(DeltaSort(N3idx(1),5:6),2)
+        [~, N3idx] = sortrows(meanSpectra,[-2 -3],'MissingPlacement','last'); %N3 sort in decending order by delta power
+        if sum(meanSpectra(N3idx(1),2:3),2) > sum(meanSpectra(N3idx(1),5:6),2)
             %Then it really is SWS2/N3
             %N3idx = N3idx(1);
             StateLookup{1,3} = N3idx(1);
@@ -852,7 +862,14 @@ switch upper(ScoringType)
             %QWidx([Widx,N1idx,N3idx,Ridx]) = [];
             temp = cell2mat(StateLookup(:,3));  temp(isnan(temp))=[];
             QWidx(temp) = [];
-            StateLookup{3,3} = QWidx;
+            StateLookup{3,3} = QWidx; 
+            if length(QWidx) > 1
+                StateLookup{3,3} = QWidx(1); %Use only the first cluster and set the second to unknown
+                LogStr = ['Warning: NSB_SleepScoring >> GMM Cannot find a single QW state'];
+                disp(LogStr);
+                NSBlog(options.LogFile,LogStr);
+            end
+
 
         elseif sum(~isNaN_idx) == 4 % Only 4 states exist
             %N1 LAMF 4-7 Hz > 50% of the epoch + more power in slow Hz
@@ -916,46 +933,76 @@ switch upper(ScoringType)
         
         % plot if requested
         if options.Scoring.plot
-            fh = figure;
+            fh = figure('Units','inches','ToolBar','none');
+            fh.Position = [fh.Position(1), -0.1, 8, 10.5];
+            t = tiledlayout('flow','TileSpacing','Compact');
+            CurAxis(n) = nexttile(1,[2 2]);
             switch sum(~isNaN_idx)
                 case 1
-                   ph = plot(meanSpectra');
-                   CurAxis = get(fh,'Children');
+                   ph_spect = plot(meanSpectra');
+                   %CurAxis = get(fh,'Children');
                    if ~isnan(StateLookup{1,3})
-                    legend(CurAxis, 'SWS2');
+                    legend(CurAxis(n), 'SWS2');
                    else
-                   legend(CurAxis, 'QW/AW/PS'); 
+                   legend(CurAxis(n), 'QW/AW/PS'); 
                    end
                 case 2
-                   ph = plot(meanSpectra([StateLookup{1,3},StateLookup{5,3}],:)');
-                   CurAxis = get(fh,'Children');
-                   legend(CurAxis,'SWS2','QW/AW/PS'); 
+                   ph_spect = plot(meanSpectra([StateLookup{1,3},StateLookup{5,3}],:)');
+                   %CurAxis = get(fh,'Children');
+                   legend(CurAxis(n),'SWS2','QW/AW/PS'); 
                 case 3
-                    ph = plot(meanSpectra([StateLookup{1,3},StateLookup{3,3},StateLookup{5,3}],:)');
-                    CurAxis = get(fh,'Children');
-                   legend(CurAxis,'SWS2','QW/SWS1','AW/PS'); 
+                    ph_spect = plot(meanSpectra([StateLookup{1,3},StateLookup{3,3},StateLookup{5,3}],:)');
+                    %CurAxis = get(fh,'Children');
+                   legend(CurAxis(n),'SWS2','QW/SWS1','AW/PS'); 
                 case 4
-                    ph = plot(meanSpectra([StateLookup{1,3},StateLookup{2,3},StateLookup{4,3},StateLookup{5,3}],:)');
-                    CurAxis = get(fh,'Children');
-                   legend(CurAxis,'SWS2','SWS1','AW','PS'); 
+                    ph_spect = plot(meanSpectra([StateLookup{1,3},StateLookup{2,3},StateLookup{4,3},StateLookup{5,3}],:)');
+                    %CurAxis = get(fh,'Children');
+                   legend(CurAxis(n),'SWS2','SWS1','AW','PS'); 
                 otherwise
-                    ph = plot(meanSpectra(cell2mat(StateLookup{:,3}),:)');
-                    CurAxis = get(fh,'Children');
-                    legend(CurAxis,'SWS2','SWS1','QW','AW','PS');
+                    ph1_rows = [StateLookup{:,3}]; ph1_rows = ph1_rows(~isnan(ph1_rows));
+                    ph_spect = plot(meanSpectra(ph1_rows,:)');
+                    legend(CurAxis(n),StateLookup{ph1_rows,1});
             end
-            title(CurAxis,'GMMlogSpectrum Cluster Profiles');
+            title(CurAxis(n),{'GMMlogSpectrum Cluster Profiles'; options.Scoring.plotTitle; ['EEG-Ch',num2str(EEG.ChNumber), ' ',EEG.Name]},...
+                'Interpreter', 'none');
 
             if options.MatlabPost2014
-                xlabel(CurAxis,'Frequency (Hz)');
-                ylabel(CurAxis,'Normalized Power');
+                xlabel(CurAxis(n),'Frequency (Hz)');
+                ylabel(CurAxis(n),'Normalized Power');
             else
-                xlabel(ph,'String','Frequency (Hz)');
-                ylabel(ph,'String','Normalized Power');
+                xlabel(ph_spect,'String','Frequency (Hz)');
+                ylabel(ph_spect,'String','Normalized Power');
             end
-            
-            set(CurAxis,'XTickLabel',rebinFreq);
+            set(CurAxis(n),'XTickLabel',rebinFreq);
+
+            for n = 1:size(StateLookup,1)
+                CurAxis(n+1) = nexttile;
+                plotdata = decimate(ph_sig.YData, ceil(length(ph_sig.YData) / length(idx)),'fir');
+                plotts = decimate(ph_sig.XData, ceil(length(ph_sig.YData) / length(idx)),'fir');
+                plot(plotts,plotdata,'Color',[0.8,0.8,0.8]); hold on;
+                plotdata(idx ~= n) = NaN;
+                plot(plotts,plotdata,'color','b');
+                try
+                title(CurAxis(n+1),StateLookup{cell2mat(StateLookup(:,3)) == n,1});
+                catch
+                  title(CurAxis(n+1),'UNK');
+                end
+                set(CurAxis(n+1),'XTick',ax(1).XTick)
+                set(CurAxis(n+1),'XTickLabel',ax(1).XTickLabel);
+                if options.MatlabPost2014
+                    set(CurAxis(n+1),'XLabel',ax(1).XLabel);
+                    set(CurAxis(n+1),'YLabel',ax(1).YLabel);
+                else
+                    set(CurAxis(n+1),'XLabel',ph_sig.XLabel);
+                    set(CurAxis(n+1),'YLabel',ph_sig.YLabel);
+                end
+            end
+            linkaxes(CurAxis(2:end),'xy');
+
+
+
             disp(['NSB_SleepScoring - Saving GMMlogSpectrum Cluster Profiles Plot...']);
-            %hgsave(h_fig, fullfile(logpath,['ArtifactFig_',num2str(now),'.fig']), '-v7.3');
+            hgsave(h_fig, fullfile(logpath,['GMMlogSpectrumClusterProfileFig_',num2str(now),'.fig']), '-v7.3');
             if ~isempty(options.LogFile)
                 print(fh,'-dpdf', fullfile(fileparts(options.LogFile),['GMMlogSpectrumClusterProfileFig_',num2str(now),'.pdf']) );
             else
@@ -971,6 +1018,9 @@ switch upper(ScoringType)
             if any(cell2mat(StateLookup(:,3)) == n) % did we assign a state to cluster n?
                 ScoreIndex(idx == n) = StateLookup{cell2mat(StateLookup(:,3)) == n,2}; %find cluster in StateLookup and return the scoringSet and assign to ScoreIndex
             end
+        end
+        else 
+        ScoreIndex = zeros(1,size(rebinPSD,1)); %scoring pallette is the length/binned the same as FFT (i.e. 5sec)
         end
           
         %debug
@@ -1047,10 +1097,10 @@ if options.Scoring.plot
     %Create Hypnogram
     ax(2) = subplot(2,1,2);
     hold on;
-    ph1 = plot(ax(2),ScoreChannel.Data,'k');
+    ph_hyp = plot(ax(2),ScoreChannel.Data,'k');
     psIDX = NaN(length(ScoreChannel.Data),1);
     psIDX(ScoreChannel.Data == 5) = 5;
-    ph2 = plot(ax(2),psIDX,'r','LineWidth',5);
+    ph{3} = plot(ax(2),psIDX,'r','LineWidth',5);
     set(ax(2),'YTick',0:5);
     set(ax(2),'YTickLabel',{'WAKE-ACTIVE','WAKE','SWS1','','SWS2','PS'});
     set(ax(2),'YLim',[-1 6])
@@ -1060,7 +1110,7 @@ if options.Scoring.plot
         if options.MatlabPost2014
             xlabel(ax(2),'Time (mins)');
         else
-            xlabel(ph1,'String','Time (mins)');
+            xlabel(ph_hyp,'String','Time (mins)');
         end
         set(ax(2),'XTick',ts(1:find(ts==60)-1:end)+1);
         set(ax(2),'XTickLabel',ts(1:find(ts==60)-1:end)/(60*60));
@@ -1069,13 +1119,13 @@ if options.Scoring.plot
         if options.MatlabPost2014
             xlabel(ax(2),'Time (hours)');
         else
-            xlabel(ph1,'String','Time (hours)');
+            xlabel(ph_hyp,'String','Time (hours)');
         end
         set(ax(2),'XTick',1:find(ts==1)-1:length(ts));
         set(ax(2),'XTickLabel',ts(1:find(ts==1)-1:end));
     end
     disp(['NSB_SleepScoring - Saving Hypnogram Plot...']);
-    %hgsave(h_fig, fullfile(logpath,['ArtifactFig_',num2str(now),'.fig']), '-v7.3');
+    hgsave(h_fig, fullfile(logpath,['Hypnogram-Fig_',num2str(now),'.fig']), '-v7.3');
     if ~isempty(options.LogFile)
         print(h_fig,'-dpdf', fullfile(fileparts(options.LogFile),['Hypnogram-Fig_',num2str(now),'.pdf']) );
     else
