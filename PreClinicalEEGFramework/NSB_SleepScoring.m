@@ -185,6 +185,8 @@ switch nargin
         errordlg(errorstr,'NSB_SleepScoring');
         return;
 end
+%generate the base plot title
+options.Scoring.plotTitle = {options.Scoring.plotTitle; ['EEG-Ch',num2str(EEG.ChNumber), ' ',EEG.Name]};
 
 %check scoring type validity
 ScoringType = options.Scoring.ScoringType;
@@ -310,11 +312,9 @@ if options.Scoring.plot
         hold on;
         plot(ax(1),EMG.Data + 3);
         legend('EEG','EMG');
-        title(ax(1),{'Hypnogram'; options.Scoring.plotTitle; ['EEG-Ch',num2str(EEG.ChNumber), ' ',EEG.Name,...
-            ' EMG-Ch',num2str(EMG.ChNumber), ' ',EMG.Name]},'Interpreter', 'none');
+        title(ax(1),[{'Hypnogram'}; options.Scoring.plotTitle; {' EMG-Ch',num2str(EMG.ChNumber), ' ',EMG.Name}],'Interpreter', 'none');
     else
-        title(ax(1),{'Hypnogram'; options.Scoring.plotTitle; ['EEG-Ch',num2str(EEG.ChNumber), ' ',EEG.Name,...
-            ' No EMG Found.']},'Interpreter', 'none');
+        title(ax(1),[{'Hypnogram'}; options.Scoring.plotTitle; {' No EMG Found.'}],'Interpreter', 'none');
     end
     if options.MatlabPost2014
         ylabel(ax(1),EEG.Units);
@@ -963,8 +963,7 @@ switch upper(ScoringType)
                     ph_spect = plot(meanSpectra(ph1_rows,:)');
                     legend(CurAxis(n),StateLookup{ph1_rows,1});
             end
-            title(CurAxis(n),{'GMMlogSpectrum Cluster Profiles'; options.Scoring.plotTitle; ['EEG-Ch',num2str(EEG.ChNumber), ' ',EEG.Name]},...
-                'Interpreter', 'none');
+            title(CurAxis(n),[{'GMMlogSpectrum Cluster Profiles'}; options.Scoring.plotTitle],'Interpreter', 'none');
 
             if options.MatlabPost2014
                 xlabel(CurAxis(n),'Frequency (Hz)');
@@ -999,12 +998,10 @@ switch upper(ScoringType)
             end
             linkaxes(CurAxis(2:end),'xy');
 
-
-
             disp(['NSB_SleepScoring - Saving GMMlogSpectrum Cluster Profiles Plot...']);
-            hgsave(h_fig, fullfile(logpath,['GMMlogSpectrumClusterProfileFig_',num2str(now),'.fig']), '-v7.3');
             if ~isempty(options.LogFile)
                 print(fh,'-dpdf', fullfile(fileparts(options.LogFile),['GMMlogSpectrumClusterProfileFig_',num2str(now),'.pdf']) );
+                hgsave(fh, fullfile(fileparts(options.LogFile),['GMMlogSpectrumClusterProfileFig_',num2str(now),'.fig']), '-v7.3');
             else
                 print(fh,'-dpdf', fullfile(cd,['GMMlogSpectrumClusterProfileFig_',num2str(now),'.pdf']) );
             end
@@ -1124,10 +1121,11 @@ if options.Scoring.plot
         set(ax(2),'XTick',1:find(ts==1)-1:length(ts));
         set(ax(2),'XTickLabel',ts(1:find(ts==1)-1:end));
     end
-    disp(['NSB_SleepScoring - Saving Hypnogram Plot...']);
-    hgsave(h_fig, fullfile(logpath,['Hypnogram-Fig_',num2str(now),'.fig']), '-v7.3');
+    %linkaxes(ax(:),'x');
+    disp(['NSB_SleepScoring - Saving Hypnogram Plot...']);    
     if ~isempty(options.LogFile)
         print(h_fig,'-dpdf', fullfile(fileparts(options.LogFile),['Hypnogram-Fig_',num2str(now),'.pdf']) );
+        hgsave(h_fig, fullfile(fileparts(options.LogFile),['Hypnogram-Fig_',num2str(now),'.fig']), '-v7.3');
     else
         print(h_fig,'-dpdf', fullfile(cd,['Hypnogram-Fig_',num2str(now),'.pdf']) );
     end
