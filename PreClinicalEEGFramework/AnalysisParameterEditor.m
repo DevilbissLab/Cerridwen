@@ -640,6 +640,20 @@ elseif strcmpi(List(get(handles.Algorithm_pull,'Value')),'Full -EMG')
                 set(Child(n),'Enable','off');
             end
         end
+elseif strcmpi(List(get(handles.Algorithm_pull,'Value')),'Full +SPECTRAL')
+    %Turn All children inactive
+    Child = get(handles.ArtDetSimp_pan,'Children');
+    for n = 1:length(Child)
+        set(Child(n),'Enable','off');
+    end
+    Child = get(handles.ArtDetFull_pan,'Children');
+        for n = 1:length(Child)
+            if isempty(strfind(get(Child(n),'Tag'),'FullMuscMult'))
+                set(Child(n),'Enable','on');
+            else
+                set(Child(n),'Enable','off');
+            end
+        end
 else
     Child = get(handles.ArtDetFull_pan,'Children');
     for n = 1:length(Child)

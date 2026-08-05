@@ -533,8 +533,7 @@ for curChannel = 1:length(DataStruct.Channel)
                 LIMS.PreClinicalFramework.ArtifactDetection.logfile = LIMS.logfile;
                 LIMS.PreClinicalFramework.ArtifactDetection.plotTitle = {DataStruct.Filename,[DataStruct.SubjectID, ' ',DataStruct.Channel(curChannel).Name]};
 
-                [DataStruct.Channel(curChannel).Artifacts, AnalysisStatus] = NSB_ArtifactDetection(DataStruct.Channel(curChannel).Data,...
-                    LIMS.PreClinicalFramework.ArtifactDetection);
+                [DataStruct.Channel(curChannel).Artifacts, AnalysisStatus] = NSB_ArtifactDetection(DataStruct.Channel(curChannel).Data, LIMS);
                 %end
             else
                 NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ...Not Detecting Artifacts on EMG Channel: ',datestr(now)]);
