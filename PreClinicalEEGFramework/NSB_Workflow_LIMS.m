@@ -425,18 +425,33 @@ end
 
 LIMS.ValidDataChans = find([DataStruct.Channel(:).Hz] > 60);
 
-%% Detrend if requested (not an option - by default)
+%% Detrend if requested (non GUI option)
 status = updateProgress(LIMS);
 
 if LIMS.PreClinicalFramework.Resample.Detrend
     status = NSB_UpdateStatusWindow(handles, '...Detrending Channels', 'NSB_Workflow_LIMS:');
 
-    [DataStruct, status] = LIMS_DetrendData(handles, DataStruct);
+    [DataStruct, status] = LIMS_DetrendData(LIMS, DataStruct);
 
     if status
         status = NSB_UpdateStatusWindow(handles, '...Detrending Channels Sucessful.', 'NSB_Workflow_LIMS:');
     else
         status = NSB_UpdateStatusWindow(handles, '...Detrending Channels Failed.', 'NSB_Workflow_LIMS:');
+    end
+end
+
+%% Filter out line noise
+status = updateProgress(LIMS);
+
+if LIMS.PreClinicalFramework.LineNoiseDetection.doDetection
+    status = NSB_UpdateStatusWindow(handles, '...Removing Line Noise from Channels', 'NSB_Workflow_LIMS:');
+
+    [DataStruct,status] = LIMS_LineDenoise(LIMS, DataStruct);
+    
+    if status
+        status = NSB_UpdateStatusWindow(handles, '...Line Noise Removal Sucessful.', 'NSB_Workflow_LIMS:');
+    else
+        status = NSB_UpdateStatusWindow(handles, '...Line Noise Removal Failed.', 'NSB_Workflow_LIMS:');
     end
 end
 

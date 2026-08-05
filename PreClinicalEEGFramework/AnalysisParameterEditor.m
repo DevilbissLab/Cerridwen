@@ -1335,6 +1335,10 @@ SaveXMLStruct.StatsTable.doMeanBaseline = get(handles.doMeanBaseline_chk,'Value'
 SaveXMLStruct.StatsTable.BaselineMeanTimeStart = str2double(get(handles.BaselineMeanTimeStart_txt ,'String'));
 SaveXMLStruct.StatsTable.BaselineMeanTimeEnd = str2double(get(handles.BaselineMeanTimeEnd_txt ,'String'));
 
+SaveXMLStruct.LineNoiseDetection.doDetection = handles.input.LineNoiseDetection.doDetection; %Values not in GUI but maintained in Parameters file
+SaveXMLStruct.LineNoiseDetection.Freq = handles.input.LineNoiseDetection.Freq; %Values not in GUI but maintained in Parameters file
+SaveXMLStruct.LineNoiseDetection.Bandwidth = handles.input.LineNoiseDetection.Bandwidth; %Values not in GUI but maintained in Parameters file
+
 List = get(handles.Algorithm_pull,'String');
 SaveXMLStruct.ArtifactDetection.algorithm = List{get(handles.Algorithm_pull,'Value')};
 SaveXMLStruct.ArtifactDetection.rm2Zero = get(handles.zero_chk,'Value');
