@@ -121,7 +121,7 @@ set(handles.SpectFinalTime_txt ,'String',num2str(varargin{1,1}.SpectralAnalysis.
 
 
 List = get(handles.Algorithm_pull,'String');
-if strcmpi(List(get(handles.Algorithm_pull,'Value')),'full') || strcmpi(List(get(handles.Algorithm_pull,'Value')),'full -emg')
+if strcmpi(List(get(handles.Algorithm_pull,'Value')),'full') || strcmpi(List(get(handles.Algorithm_pull,'Value')),'full -emg') || strcmpi(List(get(handles.Algorithm_pull,'Value')),'full +spectral')
     %Turn All children inactive
     Child = get(handles.ArtDetSimp_pan,'Children');
     for n = 1:length(Child)
@@ -627,6 +627,20 @@ if strcmpi(List(get(handles.Algorithm_pull,'Value')),'full')
         set(Child(n),'Enable','on');
         end
 elseif strcmpi(List(get(handles.Algorithm_pull,'Value')),'Full -EMG')
+    %Turn All children inactive
+    Child = get(handles.ArtDetSimp_pan,'Children');
+    for n = 1:length(Child)
+        set(Child(n),'Enable','off');
+    end
+    Child = get(handles.ArtDetFull_pan,'Children');
+        for n = 1:length(Child)
+            if isempty(strfind(get(Child(n),'Tag'),'FullMuscMult'))
+                set(Child(n),'Enable','on');
+            else
+                set(Child(n),'Enable','off');
+            end
+        end
+elseif strcmpi(List(get(handles.Algorithm_pull,'Value')),'Full +SPECTRAL')
     %Turn All children inactive
     Child = get(handles.ArtDetSimp_pan,'Children');
     for n = 1:length(Child)
@@ -1340,8 +1354,10 @@ SaveXMLStruct.ArtifactDetection.full.minFlatSigLength = str2double(get(handles.F
 SaveXMLStruct.ArtifactDetection.full.dvValMultiplier = str2double(get(handles.FullSpikeMult_txt ,'String'));
 SaveXMLStruct.ArtifactDetection.full.MaxDT = str2double(get(handles.FullSpikeSlope_txt ,'String'));
 SaveXMLStruct.ArtifactDetection.full.MinArtifactDuration = str2double(get(handles.MinArtLen_txt ,'String'));
+SaveXMLStruct.ArtifactDetection.full.MinSignal = handles.input.ArtifactDetection.full.MinSignal; %Values not in GUI but maintained in Parameters file
 SaveXMLStruct.ArtifactDetection.full.CombineArtifactTimeThreshold = str2double(get(handles.MinArtGap_txt ,'String'));
 SaveXMLStruct.ArtifactDetection.full.MuscleArtifactMultiplier = str2double(get(handles.FullMuscMult_txt ,'String'));
+SaveXMLStruct.ArtifactDetection.full.SpectralNormCutoff = handles.input.ArtifactDetection.full.SpectralNormCutoff; %Values not in GUI but maintained in Parameters file
 
 List = get(handles.SpectMeth_pull,'String');
 SaveXMLStruct.SpectralAnalysis.SPTmethod = List{get(handles.SpectMeth_pull,'Value')};

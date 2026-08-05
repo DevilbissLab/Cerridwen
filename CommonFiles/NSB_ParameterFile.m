@@ -180,11 +180,13 @@ parms.PreClinicalFramework.ArtifactDetection.full.DCcalculation = 'scaled'; %mv 
 parms.PreClinicalFramework.ArtifactDetection.full.DCvalue = 100; %mV DC hard limit
 parms.PreClinicalFramework.ArtifactDetection.full.STDMultiplier = 1.67; %Detect > X times Standard deviations.
 parms.PreClinicalFramework.ArtifactDetection.full.minFlatSigLength = 0.1; %Seconds.
+parms.PreClinicalFramework.ArtifactDetection.full.MinSignal = 5; %5 mV limit for detecting flat signal around 0mv <<<< add to params writer and processor.
 parms.PreClinicalFramework.ArtifactDetection.full.dvValMultiplier = .8; %Original 0.45%Jump DC limit as a function of: dvValMultiplier*DClimitValue or std(signal) << this wants to be a fraction of DC Threshold
 parms.PreClinicalFramework.ArtifactDetection.full.MaxDT = 4; %Maximum duration (change in time (samples)) that it takes signal to artifact
 parms.PreClinicalFramework.ArtifactDetection.full.MinArtifactDuration = 0.25; % in seconds >>>  code will expand all artifacts to have at least this length
 parms.PreClinicalFramework.ArtifactDetection.full.CombineArtifactTimeThreshold = 0.2; %in Seconds. Combine artifacts that occur less than this time window
 parms.PreClinicalFramework.ArtifactDetection.full.MuscleArtifactMultiplier = 3; %gain for EMGThreshold as a function of options.full.STDMultiplier * options.full.dvValMultiplier + medFiltData *3;
+parms.PreClinicalFramework.ArtifactDetection.full.SpectralNormCutoff = 61; %min freq used by Spectral norm (Hz)
 
 %SeizureAnalysis default parameters
 parms.PreClinicalFramework.SeizureAnalysis.RMSMultiplier = 35;    %25 (TSA) Multiplier for RMS (dmd changed from 10 on 2014Jul16)

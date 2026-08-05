@@ -1,6 +1,7 @@
 function [F,T,Pyy,validBins] = SSM_Spectrogram(Signal,window,overlap,fs,HzDiv)
 
 Signal = Signal(:); %force to row vector
+if isempty(overlap), overlap = 0; end
 offset = (window-overlap);
 nSegments = ceil(length(Signal) / offset);
 winfun = hamming(window);
