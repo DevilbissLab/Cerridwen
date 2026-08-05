@@ -24,7 +24,7 @@ function [Artifacts, status] = NSB_ArtifactDetection(Signal, options)
 %                           (double)    options.full.MaxDT (Maximum duration (change in time (samples)) that it takes signal to artifact)
 %                           (double)    options.full.MinArtifactDuration (In Seconds. All artifacts must have at least this length)
 %                           (double)    options.full.CombineArtifactTimeThreshold (in Seconds. Combine artifacts that occur less than this time window)
-%
+%                                       options.full.MinSignal
 % Outputs:
 %   Artifacts           - (Context Dependent !!) Logical vector of Artifacts if
 %                                                   options.IndexedOutput = false, Struct of Start time/ End Time values
@@ -66,6 +66,7 @@ switch nargin
         options.full.DCvalue = 100; %mV DC hard limit
         options.full.STDMultiplier = 3; %Detect > X times Standard deviations.
         options.full.minFlatSigLength = 0.1; %Seconds.
+        options.full.MinSignal = 5; %minimum absolute signal value for options.full.minFlatSigLength 
         options.full.dvValMultiplier = .8; %Original 0.45%Jump DC limit as a function of: dvValMultiplier*DClimitValue or std(signal) << this wants to be a fraction of DC Threshold
         options.full.MaxDT = 4; %Maximum duration (change in time (samples)) that it takes signal to artifact
         options.full.MinArtifactDuration = 0.25; % in seconds >>>  code will expand all artifacts to have at least this length
@@ -93,6 +94,7 @@ switch nargin
         if ~isfield(options.full,'STDMultiplier'), options.full.STDMultiplier = 3;inputError = true;
             else options.full.STDMultiplier = abs(options.full.STDMultiplier); end
         if ~isfield(options.full,'minFlatSigLength'), options.full.minFlatSigLength = 0.1;inputError = true; end
+        if ~isfield(options.full,'MinSignal'), options.full.MinSignal = 5;inputError = true; end
         if ~isfield(options.full,'dvValMultiplier'), options.full.dvValMultiplier = .8;inputError = true; end
         if ~isfield(options.full,'MaxDT'), options.full.MaxDT = 4;inputError = true; end
         if ~isfield(options.full,'MinArtifactDuration'), options.full.MinArtifactDuration = 0.25;inputError = true; end
@@ -206,6 +208,20 @@ switch upper(options.algorithm)
             else
                 FlatSignalIDX = false(size(FlatSignalIDX,1),1);
             end
+
+            % find segments of dropout that are not flat (i.e. ADC noise)
+            MinSignalIDX = abs(Signal) <= options.full.MinSignal;                            %<<<<< Hard coded for now
+            FlatIDX = strfind(char(double(MinSignalIDX')),char(ones(1,minFlatSigLength))); %IDX of > DropoutDT
+            if ~isempty(FlatIDX)
+                dropoutIndex = false(size(Signal));
+                dropoutIndex(FlatIDX) = true;
+                dropoutIndex = conv(single(dropoutIndex),ones(1,minFlatSigLength-1)) > 0; %<< check math single could be used here to cheat rounding errors see 'eps'
+                MinSignalIDX = dropoutIndex(1:end-(minFlatSigLength-2));
+            else
+                MinSignalIDX = false(size(MinSignalIDX,1),1);
+            end
+
+            FlatSignalIDX = FlatSignalIDX | MinSignalIDX;
             
             %% find artifacts that excede dv/dt limit
             % generate devalued DCthreshold used for electrical noise detection (crunchies)
@@ -254,6 +270,19 @@ switch upper(options.algorithm)
                 EMGArtifactIndex = false(size(Signal));
             end
             
+            % if strcmpi(options.algorithm,'FULL +SPECTRAL')
+            %     %placeholder for later
+            %         [F,T,P,validBins] = SSM_Spectrogram(EEG.Data,...
+            %         options.Scoring.FFTEpoch*EEG.Hz,...
+            %         options.Scoring.WinOffset*EEG.Hz,...
+            %         EEG.Hz,...
+            %         options.Scoring.HzDiv);
+            % 
+            %         % remove secondary artifact in spectral domain
+            %         SpectralNorm = sum(P(:,find(F == 61):end),2,'omitnan');
+            %         P(SpectralNorm > mean(SpectralNorm)+std(SpectralNorm)*options.ArtifactDetection.full.STDMultiplier,:) = NaN;
+            % end
+
             %% Join Artifact indicies and create Struct
             Artifacts = ExtremeSignalIDX | FlatSignalIDX | dvArtifactIndex | EMGArtifactIndex;
             
@@ -379,10 +408,14 @@ if length(Signal) > 10000
     title(options.plotTitle,'FontWeight','bold','Interpreter', 'none');
     ylabel('Signal');
     set(get(h_fig,'CurrentAxes'),'XMinorTick','on')
+    try
     if sign(DCThresh) == -1
         set(get(h_fig,'CurrentAxes'),'YLim',[DCThresh*1.5,-DCThresh*1.5]);
     else
         set(get(h_fig,'CurrentAxes'),'YLim',[-DCThresh*1.5,DCThresh*1.5]);
+    end
+    catch mee
+        disp(mee);
     end
     
     %plot(Artifacts,':r');
