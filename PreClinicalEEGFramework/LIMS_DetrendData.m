@@ -1,9 +1,10 @@
 function [DataStruct,status] = LIMS_DetrendData(handles, DataStruct)
+%helper function to detrend on a channel by channel bases
 
 status = false;
 try
     for curChan = 1:DataStruct.nChannels
-        DataStruct.Channel(curChan).Data = detrend(DataStruct.Channel(curChan).Data);
+        DataStruct.Channel(curChan).Data = detrend(DataStruct.Channel(curChan).Data, handles.parameters.PreClinicalFramework.Resample.DetrendType);
     end
     status = true;
 catch ME

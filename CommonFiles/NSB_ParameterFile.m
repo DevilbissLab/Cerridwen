@@ -1,5 +1,6 @@
 function parms = NSB_ParameterFile()
 % NSB_ParameterFile() - Parameter file for all NSB software
+%   Loads once during Cerridwen initialization.
 %
 % Inputs: none
 %
@@ -159,7 +160,8 @@ parms.PreClinicalFramework.Reference.ReRefChan = '';
 parms.PreClinicalFramework.Resample.doResample = true;
 parms.PreClinicalFramework.Resample.newSampleRate = 250; %Hz
 parms.PreClinicalFramework.Resample.InterpSamples = 50; 
-parms.PreClinicalFramework.Resample.Detrend = true;
+parms.PreClinicalFramework.Resample.Detrend = true;         %not in XML
+parms.PreClinicalFramework.Resample.DetrendType = 0;   %removes nth-degree polynomial trend. n = 0 (mean); n = 1 (linear); n = 2 (quadratic)   %not in XML
 
 %StatsTable specific parameters
 parms.PreClinicalFramework.StatsTable.doMeanBaseline = false;
@@ -180,6 +182,7 @@ parms.PreClinicalFramework.ArtifactDetection.full.DCcalculation = 'scaled'; %mv 
 parms.PreClinicalFramework.ArtifactDetection.full.DCvalue = 100; %mV DC hard limit
 parms.PreClinicalFramework.ArtifactDetection.full.STDMultiplier = 1.67; %Detect > X times Standard deviations.
 parms.PreClinicalFramework.ArtifactDetection.full.minFlatSigLength = 0.1; %Seconds.
+parms.PreClinicalFramework.ArtifactDetection.full.MinSignal = 5; %minimum absolute signal value for options.full.minFlatSigLength       %not in XML
 parms.PreClinicalFramework.ArtifactDetection.full.dvValMultiplier = .8; %Original 0.45%Jump DC limit as a function of: dvValMultiplier*DClimitValue or std(signal) << this wants to be a fraction of DC Threshold
 parms.PreClinicalFramework.ArtifactDetection.full.MaxDT = 4; %Maximum duration (change in time (samples)) that it takes signal to artifact
 parms.PreClinicalFramework.ArtifactDetection.full.MinArtifactDuration = 0.25; % in seconds >>>  code will expand all artifacts to have at least this length
