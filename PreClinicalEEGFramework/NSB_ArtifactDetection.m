@@ -1,4 +1,4 @@
-function [Artifacts, status] = NSB_ArtifactDetection(Signal, options)
+function [Artifacts, status] = NSB_ArtifactDetection(Signal, LIMS)
 % NSB_ArtifactDetection() - Detect artifacts in Single EEG channel
 %
 % Inputs:
@@ -10,6 +10,8 @@ function [Artifacts, status] = NSB_ArtifactDetection(Signal, options)
 %                                       'DC' - use a simple DC threshold
 %                                       'RMS' - use the rms of the signal as the simple DC threshold
 %                                       'FULL' - fully process signal using several simultaneous approaches
+%                                       'FULL -EMG' - fully process signal using several simultaneous approaches (excluding EMG processing)
+%                                       'FULL +SPECTRAL' - fully process signal using several simultaneous approaches +Spectral detection
 %                           (string)    options.logfile (file path and name)
 %                           (double)    options.DCvalue (simple DC threshold value - mV)
 %                           (double)    options.RMSMultiplier (multiply RMS value by this number for simple DC threshold)
@@ -19,12 +21,14 @@ function [Artifacts, status] = NSB_ArtifactDetection(Signal, options)
 %                           (string)    options.full.DCcalculation (when using 'FULL' type processing, use a 'DC' or 'scaled' simple DC threshold)            
 %                           (double)    options.full.DCvalue (simple DC threshold value - mV)
 %                           (double)    options.full.STDMultiplier (multiply 'scaled' detection by this number for simple DC threshold)
+%                           (double)    options.full.MinSignal = 5; minimum signal detected as 'flat' from 0 mV
 %                           (double)    options.full.minFlatSigLength (Min time in Seconds permitted for signal to be flat)
 %                           (double)    options.full.dvValMultiplier (scaline for change in time (samples)) that it takes signal to artifact)
 %                           (double)    options.full.MaxDT (Maximum duration (change in time (samples)) that it takes signal to artifact)
 %                           (double)    options.full.MinArtifactDuration (In Seconds. All artifacts must have at least this length)
 %                           (double)    options.full.CombineArtifactTimeThreshold (in Seconds. Combine artifacts that occur less than this time window)
-%                                       options.full.MinSignal
+%                           (double)    options.full.SpectralNormCutoff
+%
 % Outputs:
 %   Artifacts           - (Context Dependent !!) Logical vector of Artifacts if
 %                                                   options.IndexedOutput = false, Struct of Start time/ End Time values
@@ -46,10 +50,14 @@ function [Artifacts, status] = NSB_ArtifactDetection(Signal, options)
 % Written By David M. Devilbiss
 % NexStep Biomarkers, LLC. (info@nexstepbiomarkers.com)
 % December 8 2011, Version 1.0
+% August 5 2026, Version 2.0 - added minimal signal detector to address ADC noise
+%                              added spectral-based detector
+%                              updated 'options' struct
 
 status = false;
 Signal = Signal(:);
 Artifacts = [];
+options = LIMS.PreClinicalFramework.ArtifactDetection;
 switch nargin
     case 1
         %use default parameters
@@ -72,6 +80,7 @@ switch nargin
         options.full.MinArtifactDuration = 0.25; % in seconds >>>  code will expand all artifacts to have at least this length
         options.full.CombineArtifactTimeThreshold = 0.2; %in Seconds. Combine artifacts that occur less than this time window
         options.full.MuscleArtifactMultiplier = 3; %gain for EMGThreshold as a function of options.full.STDMultiplier * options.full.dvValMultiplier + medFiltData *3;
+        options.full.SpectralNormCutoff = 61; %min freq used by Spectral norm (Hz)
     case 2
         %Check relevant options exist
         inputError = false;
@@ -100,6 +109,7 @@ switch nargin
         if ~isfield(options.full,'MinArtifactDuration'), options.full.MinArtifactDuration = 0.25;inputError = true; end
         if ~isfield(options.full,'CombineArtifactTimeThreshold'), options.full.CombineArtifactTimeThreshold = 0.2;inputError = true; end
         if ~isfield(options.full,'MuscleArtifactMultiplier'), options.full.MuscleArtifactMultiplier = 3;inputError = true; end
+        if ~isfield(options.full,'SpectralNormCutoff'), options.full.SpectralNormCutoff = 61;inputError = true; end
         if inputError
         errorstr = ['Warning: NSB_ArtifactDetection >> Missing Options were set to default'];
         if ~isempty(options.logfile)
@@ -140,7 +150,7 @@ switch upper(options.algorithm)
            NSBlog(options.logfile,errorstr);
         end
 
-    case {'FULL','FULL -EMG'}
+    case {'FULL','FULL -EMG', 'FULL +SPECTRAL'}
         %% determine the positions where signal is above DC Threshold
         %get indicies of extreme values
         try
@@ -210,7 +220,7 @@ switch upper(options.algorithm)
             end
 
             % find segments of dropout that are not flat (i.e. ADC noise)
-            MinSignalIDX = abs(Signal) <= options.full.MinSignal;                            %<<<<< Hard coded for now
+            MinSignalIDX = abs(Signal) <= options.full.MinSignal;
             FlatIDX = strfind(char(double(MinSignalIDX')),char(ones(1,minFlatSigLength))); %IDX of > DropoutDT
             if ~isempty(FlatIDX)
                 dropoutIndex = false(size(Signal));
@@ -269,6 +279,28 @@ switch upper(options.algorithm)
             else
                 EMGArtifactIndex = false(size(Signal));
             end
+
+            %% find spectral artifacts
+            if strcmpi(options.algorithm,'FULL +SPECTRAL')
+                disp('... Spectral Artifact Detection');
+                SpectralWindow = LIMS.PreClinicalFramework.SpectralAnalysis.FinalFreqResolution*LIMS.PreClinicalFramework.ArtifactDetection.SampleRate;
+                    [F,T,P,validBins] = SSM_Spectrogram(Signal, SpectralWindow, [],... 
+                        LIMS.PreClinicalFramework.ArtifactDetection.SampleRate,...
+                        LIMS.PreClinicalFramework.SpectralAnalysis.FinalFreqResolution);
+
+                    % remove secondary artifact in spectral domain
+                    SpectralNorm = sum(P(:,find(F == options.full.SpectralNormCutoff):end),2,'omitnan');
+
+                    SpectralArtifactIndex = false(size(Signal));
+                    SpectralIDX = SpectralNorm > mean(SpectralNorm)+std(SpectralNorm)*options.full.STDMultiplier;
+                    SpectralIDX = SpectralIDX | validBins; %address valid bins returned from Spectrogram and excessive spectral noise
+                    SpectralArtifactIndex(SpectralIDX) = true;
+                    SpectralArtifactIndex = conv(single(SpectralArtifactIndex),ones(1,SpectralWindow-1)) > 0; %<< check math single could be used here to cheat rounding errors see 'eps'
+                    SpectralArtifactIndex = SpectralArtifactIndex(1:end-(SpectralWindow-2));
+            else
+                SpectralArtifactIndex = false(size(Signal));
+            end
+
             
             % if strcmpi(options.algorithm,'FULL +SPECTRAL')
             %     %placeholder for later
@@ -284,7 +316,7 @@ switch upper(options.algorithm)
             % end
 
             %% Join Artifact indicies and create Struct
-            Artifacts = ExtremeSignalIDX | FlatSignalIDX | dvArtifactIndex | EMGArtifactIndex;
+            Artifacts = ExtremeSignalIDX | FlatSignalIDX | dvArtifactIndex | EMGArtifactIndex | SpectralArtifactIndex;
             
         catch ME
             Artifacts = false(size(Signal));
@@ -457,7 +489,26 @@ if length(Signal) > 10000
         
         end
         legend('Signal','ExtremeArtifact','dvArifact','dropoutArtifact','Artifacts','Threshold');
+    elseif strcmpi(options.algorithm,'FULL +Spectral')
+        if reduceSample
+        plot(ts,ExtremeSignalIDX(1:10:end)*ArtHeight,':c');
+        plot(ts,dvArtifactIndex(1:10:end)*ArtHeight,':g');
+        plot(ts,FlatSignalIDX(1:10:end)*ArtHeight,':m');
+        plot(ts, SpectralArtifactIndex(1:10:end)*ArtHeight,':r');
+        plot(ts, Artifacts(1:10:end)*DCThresh/2,'y');
+        line([1,ts(end)],DCThresh * ones(2,1),'Color','k');
+        line([1,ts(end)],-DCThresh * ones(2,1),'Color','k');
+        else
+        plot(ExtremeSignalIDX*ArtHeight,':c');
+        plot(dvArtifactIndex*ArtHeight,':g');
+        plot(FlatSignalIDX*ArtHeight,':m');
+        plot(ts, SpectralArtifactIndex*ArtHeight,':r');
+        plot(ts, Artifacts*DCThresh/2,'y');
+        line([1,ts(end)],DCThresh * ones(2,1),'Color','k');
+        line([1,ts(end)],-DCThresh * ones(2,1),'Color','k');
         
+        end
+        legend('Signal','ExtremeArtifact','dvArifact','dropoutArtifact','SpectralArtifact','Artifacts','Threshold');
     elseif strcmpi(options.algorithm,'rms')
         if reduceSample  
             plot(ts, Artifacts(1:10:end)*DCThresh/2,'y');
