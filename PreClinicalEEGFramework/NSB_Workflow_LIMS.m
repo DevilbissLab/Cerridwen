@@ -33,6 +33,7 @@ function [status, msg] = NSB_Workflow_LIMS(handles)
 status = false;
 msg = '';
 AbortFileLoad = false;
+rng('default');
 NSBlog(handles.parameters.PreClinicalFramework.LogFile,'NSB_Workflow_LIMS: Begin');
 
 % Create Local LIMS Struct
