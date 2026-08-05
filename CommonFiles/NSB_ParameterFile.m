@@ -168,6 +168,11 @@ parms.PreClinicalFramework.StatsTable.doMeanBaseline = false;
 parms.PreClinicalFramework.StatsTable.BaselineMeanTimeStart = [];
 parms.PreClinicalFramework.StatsTable.BaselineMeanTimeEnd = [];
 
+% LineNoise Filtering default parameters
+parms.PreClinicalFramework.LineNoiseDetection.doDetection = true;
+parms.PreClinicalFramework.LineNoiseDetection.Freq = 60; %60 Hz AC line noise
+parms.PreClinicalFramework.LineNoiseDetection.Bandwidth = 2; %Filter width (Should be even)
+
 % Artifact Detection default parameters
 parms.PreClinicalFramework.ArtifactDetection.doDetection = true;
 parms.PreClinicalFramework.ArtifactDetection.SampleRate = 100;
