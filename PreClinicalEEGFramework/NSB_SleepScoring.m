@@ -1035,7 +1035,7 @@ switch upper(ScoringType)
             CurAxis(n) = nexttile(1,[2 2]);
 
             ph_spect = plot(meanSpectra');
-            for curRow = 1:size(StateLookup,2)
+            for curRow = 1:size(StateLookup,1)
                 if any([StateLookup{:,3}] == curRow)
                 Labels(curRow) = StateLookup([StateLookup{:,3}] == curRow,1);
                 else
@@ -1108,7 +1108,7 @@ switch upper(ScoringType)
             disp(['NSB_SleepScoring - Saving GMMlogSpectrum Cluster Profiles Plot...']);
             if ~isempty(options.LogFile)
                 print(fh,'-dpdf', fullfile(fileparts(options.LogFile),['GMMlogSpectrumClusterProfileFig_',num2str(now),'.pdf']) );
-                hgsave(fh, fullfile(fileparts(options.LogFile),['GMMlogSpectrumClusterProfileFig_',num2str(now),'.fig']), '-v7.3');
+%                hgsave(fh, fullfile(fileparts(options.LogFile),['GMMlogSpectrumClusterProfileFig_',num2str(now),'.fig']), '-v7.3');
             else
                 print(fh,'-dpdf', fullfile(cd,['GMMlogSpectrumClusterProfileFig_',num2str(now),'.pdf']) );
             end
@@ -1134,6 +1134,11 @@ switch upper(ScoringType)
         %Combine FFTEpochs into StageEpochs
         %[ScoreIndex,ScoreIndexTS] = combineFFTEpoch(ScoreIndex,options); %<<< Need to combine time and rebin << here is where we need to return new .ts  << F and T are idnetial to ScoreIndex here
         [ScoreIndex,ScoreIndexTS] = combineFFTEpoch(ScoreIndex,validBins,options); %<<< Need to combine time and rebin << here is where we need to return new .ts  << F and T are idnetial to ScoreIndex here
+        if options.rules.ForceArtifactsAsWaking
+                LogStr = ['Info: NSB_SleepScoring >> Forceing artifacts as waking'];
+                disp(LogStr);
+                NSBlog(options.LogFile,LogStr);
+        end
         
     otherwise
         errorstr = ['Warning: NSB_SleepScoring >> Incorrect Analyses'];
@@ -1234,7 +1239,7 @@ if options.Scoring.plot
     disp(['NSB_SleepScoring - Saving Hypnogram Plot...']);    
     if ~isempty(options.LogFile)
         print(h_fig,'-dpdf', fullfile(fileparts(options.LogFile),['Hypnogram-Fig_',num2str(now),'.pdf']) );
-        hgsave(h_fig, fullfile(fileparts(options.LogFile),['Hypnogram-Fig_',num2str(now),'.fig']), '-v7.3');
+%        hgsave(h_fig, fullfile(fileparts(options.LogFile),['Hypnogram-Fig_',num2str(now),'.fig']), '-v7.3');
     else
         print(h_fig,'-dpdf', fullfile(cd,['Hypnogram-Fig_',num2str(now),'.pdf']) );
     end
