@@ -245,6 +245,7 @@ else
     if islogical(EEG.Artifacts) || isempty(EEG.Artifacts)
         Artifact_IDX = EEG.Artifacts;
     elseif isfield(EEG.Artifacts,'intStarts')
+        %Convert Intervals 2 Logical
         Artifact_IDX = NSB_interval2IDX(EEG.Artifacts,length(EEG.Data),EEG.Hz);
     end
     
@@ -260,15 +261,7 @@ else
 end
 options.Scoreindex.freqs = F;
 options.Scoreindex.ts = T;
-
-% extract some data before we clear the EEG data
 options.File.SampleHz = EEG.Hz;
-if islogical(EEG.Artifacts)
-    Artifact_IDX = EEG.Artifacts;
-elseif isfield(EEG.Artifacts,'intStarts')
-    %Convert Intervals 2 Logical
-    Artifact_IDX = NSB_interval2IDX(EEG.Artifacts,length(EEG.Data),EEG.Hz);
-end
 
 %prep for filtering
 numSamplesInFilterWin = ceil(options.Scoring.StageEpoch / options.Scoring.FFTEpoch);
@@ -335,13 +328,6 @@ if nnz(validBins)/length(validBins)*100 < options.Scoring.FFTvalidData
         errordlg(errorstr,'NSB_SpectralAnalysis');
     end
 end
-
-% % Remove 60 Hz
-% P(:,find(F == 59):find(F == 61)) = NaN;
-% 
-% % remove secondary artifact in spectral domain
-% SpectralNorm = sum(P(:,find(F == 61):end),2,'omitnan');
-% P(SpectralNorm > mean(SpectralNorm)+std(SpectralNorm)*options.ArtifactDetection.full.STDMultiplier,:) = NaN;
 
 %Generate Spectral norm (total power) << there are other ways to do this i.e. l_1 norm
 SpectralNorm = sum(P,2,'omitnan'); %get sum for each row (i.e. each time slice)
@@ -648,6 +634,7 @@ switch upper(ScoringType)
     case 'GMMLOGSPECTRUM'
         disp('Running GMM log Spectrum');
         %% logarithmically bin spectrum and use as input for GMM clustering
+        % To Try = add artifact vector
         
         %clean up PSD
         NormSpectralMatrix(1,:) = []; %Remove DC component
@@ -790,7 +777,7 @@ switch upper(ScoringType)
                 minnumComponents = 1;
             end
             warning on;
-            disp(['Final Number of Clusters = ',num2str(minnumComponents)]);
+            disp(['Final Number of Clusters (via BIC) = ',num2str(minnumComponents)]);
             try
                 [idx,nlogl,NormSpectralMatrix] = cluster(obj{minnumComponents},rebinPSD); %n=1 obj unrecognized
             catch ME
@@ -1145,7 +1132,8 @@ switch upper(ScoringType)
         %save testFile
         
         %Combine FFTEpochs into StageEpochs
-        [ScoreIndex,ScoreIndexTS] = combineFFTEpoch(ScoreIndex,options); %<<< Need to combine time and rebin << here is where we need to return new .ts  << F and T are idnetial to ScoreIndex here
+        %[ScoreIndex,ScoreIndexTS] = combineFFTEpoch(ScoreIndex,options); %<<< Need to combine time and rebin << here is where we need to return new .ts  << F and T are idnetial to ScoreIndex here
+        [ScoreIndex,ScoreIndexTS] = combineFFTEpoch(ScoreIndex,validBins,options); %<<< Need to combine time and rebin << here is where we need to return new .ts  << F and T are idnetial to ScoreIndex here
         
     otherwise
         errorstr = ['Warning: NSB_SleepScoring >> Incorrect Analyses'];
@@ -1175,7 +1163,7 @@ ScoreChannel.ts = ScoreIndexTS;
 % ScoreChannel.DigMax = 32767;
 % ScoreChannel.PhysMin = 0;
 % ScoreChannel.PhysMax = 10;
-
+% EDF approach here....
 %  If a hypnogram is stored as an ordinary signal,
 %sleep stages W,1,2,3,4,R,M should be coded in the data records as the
 %integer numbers 0,1,2,3,4,5,6 respectively. Unscored epochs should be
@@ -1188,19 +1176,19 @@ for n = 1:length(ScoreIndex)
         case 0 %unspecified State
             label = 'UNSPECIFIED';
             ScoreChannel.Data(n,1) = 9;
-        case 1 %paradoxical sleep
+        case 1 %paradoxical sleep - REM
             label = 'PS';
             ScoreChannel.Data(n,1) = 5;
-        case 2 %SW sleep (2)
+        case 2 %SW sleep (2) - N3
             label = 'SWS2';
             ScoreChannel.Data(n,1) = 4;
-        case 3 %SW sleep (1)
+        case 3 %SW sleep (1) - N2
             label = 'SWS1';
             ScoreChannel.Data(n,1) = 2;
-        case 4 %waking
+        case 4 %waking - N1
             label = 'WAKE';
             ScoreChannel.Data(n,1) = 1;
-        case 5 %active wake
+        case 5 %active wake - W
             label = 'WAKE-ACTIVE';
             ScoreChannel.Data(n,1) = 0;
         otherwise %unspecified State
@@ -1220,7 +1208,7 @@ if options.Scoring.plot
     psIDX(ScoreChannel.Data == 5) = 5;
     ph{3} = plot(ax(2),psIDX,'r','LineWidth',5);
     set(ax(2),'YTick',0:5);
-    set(ax(2),'YTickLabel',{'WAKE-ACTIVE','WAKE','SWS1','','SWS2','PS'});
+    set(ax(2),'YTickLabel',{'WAKE-ACTIVE (W)','WAKE (S1/N1)','SWS1 (S2/N2)','(S3)','SWS2 (S4/N3)','PS (R)'});
     set(ax(2),'YLim',[-1 6])
     ts =  (0:options.Scoring.StageEpoch:(length(ScoreChannel.Data)*options.Scoring.StageEpoch)) /60; %in minutes
     set(ax(2),'XLim',[0 length(ts)]);

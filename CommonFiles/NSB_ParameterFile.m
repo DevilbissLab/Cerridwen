@@ -177,7 +177,7 @@ parms.PreClinicalFramework.LineNoiseDetection.Bandwidth = 2; %Filter width (Shou
 parms.PreClinicalFramework.ArtifactDetection.doDetection = true;
 parms.PreClinicalFramework.ArtifactDetection.SampleRate = 100;
 parms.PreClinicalFramework.ArtifactDetection.IndexedOutput = true;
-parms.PreClinicalFramework.ArtifactDetection.algorithm = 'FULL';
+parms.PreClinicalFramework.ArtifactDetection.algorithm = 'FULL'; % 'DC', 'RMS', 'Full', 'Full -EMG', 'Full +Spectral'
 parms.PreClinicalFramework.ArtifactDetection.logfile = '';
 parms.PreClinicalFramework.ArtifactDetection.DCvalue = 100; %mV DC hard limit
 parms.PreClinicalFramework.ArtifactDetection.RMSMultiplier = 5; %Detect > X times RMS;(Default 5)
@@ -278,13 +278,15 @@ else
     parms.PreClinicalFramework.Scoring.SomnogramReport_Template = 'X:\NSB_AnalyticFramework\ObjectCode\InstallerFiles\Templates\HypnogramReport_Template.doc';
 end
 % SleepScore Logical Rules
-parms.PreClinicalFramework.rules.ApplyArchitectureRules = false; %<< Something funky here
-parms.PreClinicalFramework.rules.SWS2.PercentOfStageEpoch = 45; %>= percent of FFTEpocs to be scored in a Stage Epoch to be called SWS2
-parms.PreClinicalFramework.rules.SWS1.PercentOfStageEpoch = 30; 
-parms.PreClinicalFramework.rules.QW.PercentOfStageEpoch = 60; 
-parms.PreClinicalFramework.rules.AW.PercentOfStageEpoch = 80; 
-parms.PreClinicalFramework.rules.PS.PercentOfStageEpoch = 80; 
-parms.PreClinicalFramework.rules.UNK.PercentOfStageEpoch = 80;
+parms.PreClinicalFramework.rules.ForceArtifactsAsWaking = true; %<< Something funky here
+parms.PreClinicalFramework.rules.ApplyArchitectureRules = false;
+% Values represent >= percent of FFTEpocs to be scored in a Stage Epoch to be called SWS2
+parms.PreClinicalFramework.rules.SWS2.PercentOfStageEpoch = 20; %N3 for human default = 45 (AASM v3 = 20)  
+parms.PreClinicalFramework.rules.SWS1.PercentOfStageEpoch = NaN;%N2 for human default = 30 (AASM v3) = NaN
+parms.PreClinicalFramework.rules.QW.PercentOfStageEpoch =   NaN;%N1 for human default = 60 (AASM v3) = NaN 
+parms.PreClinicalFramework.rules.AW.PercentOfStageEpoch =   NaN;% W for human default = 80 (AASM v3) = NaN 
+parms.PreClinicalFramework.rules.PS.PercentOfStageEpoch =   NaN;% R for human default = 80 (AASM v3) = NaN 
+parms.PreClinicalFramework.rules.UNK.PercentOfStageEpoch =  NaN;%             default = 80 (AASM v3) = NaN 
 parms.PreClinicalFramework.rules.minStateLength = 10; %(seconds) this is rounded to the nearest parms.PreClinicalFramework.Scoring.StageEpoch
 
 % GMM starting point 

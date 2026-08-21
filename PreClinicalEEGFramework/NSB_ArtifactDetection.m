@@ -220,6 +220,22 @@ switch upper(options.algorithm)
             end
 
             % find segments of dropout that are not flat (i.e. ADC noise)
+            FlatSignalIDX2 = abs(diff(Signal))  <= options.full.MinSignal;
+            FlatSignalIDX2 = [FlatSignalIDX2; 1] | [1; FlatSignalIDX2];
+            %check for min length of flat segment
+            %Determine segment length using  DMD's ubiquitous char trick
+            FlatIDX = strfind(char(double(FlatSignalIDX2')),char(ones(1,minFlatSigLength))); %IDX of > DropoutDT
+            
+            if ~isempty(FlatIDX)
+                dropoutIndex = false(size(Signal));
+                dropoutIndex(FlatIDX) = true;
+                dropoutIndex = conv(single(dropoutIndex),ones(1,minFlatSigLength-1)) > 0; %<< check math single could be used here to cheat rounding errors see 'eps'
+                FlatSignalIDX2 = dropoutIndex(1:end-(minFlatSigLength-2));
+            else
+                FlatSignalIDX2 = false(size(FlatSignalIDX2,1),1);
+            end
+
+            % find segments of dropout that are not flat (i.e. ADC noise)
             MinSignalIDX = abs(Signal) <= options.full.MinSignal;
             FlatIDX = strfind(char(double(MinSignalIDX')),char(ones(1,minFlatSigLength))); %IDX of > DropoutDT
             if ~isempty(FlatIDX)
@@ -231,7 +247,7 @@ switch upper(options.algorithm)
                 MinSignalIDX = false(size(MinSignalIDX,1),1);
             end
 
-            FlatSignalIDX = FlatSignalIDX | MinSignalIDX;
+            FlatSignalIDX = FlatSignalIDX | FlatSignalIDX2 | MinSignalIDX;
             
             %% find artifacts that excede dv/dt limit
             % generate devalued DCthreshold used for electrical noise detection (crunchies)
