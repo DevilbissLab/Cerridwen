@@ -112,6 +112,8 @@ DeltaPower = [];
 ThetaPower = [];
 EMGPower = [];
 ScoreChannel = [];
+RndGen = rng;
+rng(42,'twister');
 
 switch nargin
     case {1, 2, 3}
@@ -770,7 +772,8 @@ switch upper(ScoringType)
                     end
                     [MinSS,breakPt]=min(SumSquare);
                     minBIC = BIC(breakPt +1);
-                    minnumComponents = breakPt +1;
+                    minnumComponents = breakPt +1; %+1 helps when there is an artifact
+                    %minnumComponents = breakPt;
                 end
             elseif ~options.Scoring.force5GMMclusters
                 minBIC = NaN;
@@ -816,12 +819,12 @@ switch upper(ScoringType)
 
         %Redo 
         % AASM 2026 v3
-            if ~isempty(meanSpectra)
+            if ~isempty(meanSpectra) && ~isempty(idx)
                 [~, DeltaIdx] = sortrows(meanSpectra,[-2 -3],'MissingPlacement','last'); %sort in decending order by delta power
                 [~, ThetaIdx] = sortrows(meanSpectra,[-4 -5],'MissingPlacement','last'); %sort in decending order by theta power
                 %[~, BetaIdx] = sortrows(meanSpectra,[-6 -7],'MissingPlacement','last'); %sort in decending order by beta power
                 [~, BetaIdx] = sortrows(sum(meanSpectra(:,6:7),2) ./ sum(meanSpectra(:,4:5),2) ./ sum(meanSpectra(:,2:3),2),[-1],'MissingPlacement','last'); %sort in decending order by beta power
-    
+                [~,LowPwrIdx] = sortrows(sum(meanSpectra(:,2:end),2),[1],'MissingPlacement','last'); %sort in decending order by total power (1+ Hz)
     
                 %% Try the 1st two easiest states to identify.
                 %N3 0.5-2Hz that are > 20% of the 30 sec epoch
@@ -829,60 +832,129 @@ switch upper(ScoringType)
                     %if Delta power > Beta power AND 1-3 Hz has the most power
                     StateLookup{1,3} = DeltaIdx(1);
                 else
-                LogStr = ['Warning: NSB_SleepScoring >> GMM Cannot find N3/SWS2'];
-                disp(LogStr);
-                NSBlog(options.LogFile,LogStr);
+                    LogStr = ['Warning: NSB_SleepScoring >> GMM Cannot find N3/SWS2'];
+                    disp(LogStr);
+                    NSBlog(options.LogFile,LogStr);
                 end
-    
+
                 % Rem Sawtooth waves 2-6 Hz,LAMF w/o spindles or K-complexes
                 if all(meanSpectra(ThetaIdx(1),4) > meanSpectra(ThetaIdx(1),[1:3,5:end]))
-                    % if the spectral peak is truely theta 
+                    % if the spectral peak is truely theta - Highest theta 4.5-6.5 AND higher than all other points.
                     StateLookup{5,3} = ThetaIdx(1);
-                    else
-                LogStr = ['Warning: NSB_SleepScoring >> GMM Cannot find PS/R'];
+                    LogStr = ['Info: NSB_SleepScoring >> GMM found PS/R using rule 1a'];
+                elseif all(meanSpectra(ThetaIdx(1),5) > meanSpectra(ThetaIdx(1),[1:3,5:end]))
+                    % if the spectral peak is truely theta - Highest theta 4.5-6.5 AND higher than all other points.
+                    StateLookup{5,3} = ThetaIdx(1);
+                    LogStr = ['Warning: NSB_SleepScoring >> GMM found PS/R using rule 1b'];
+                else
+                    LogStr = ['Warning: NSB_SleepScoring >> GMM Cannot find PS/R'];
+                end
                 disp(LogStr);
                 NSBlog(options.LogFile,LogStr);
-                end
-    
+
                 %N1 LAMF 4-7 Hz > 50% of the epoch + more power in slow Hz
                 %     Delta 2+3 / Beta 6+7 (Ratio)
-                if sum(meanSpectra(DeltaIdx(1),2:3),2) > sum(meanSpectra(DeltaIdx(1),5:6),2) && isnan(StateLookup{1,3})
-                    %if Delta power > Beta power AND 1-3 Hz has the most power
-                    StateLookup{2,3} = DeltaIdx(1);
+                if sum(meanSpectra(DeltaIdx(1),2:3),2) > sum(meanSpectra(DeltaIdx(1),5:6),2)
+                    %if Delta power > Beta power
+                    if ~ismember(DeltaIdx(1),[StateLookup{:,3}])
+                        %if cluster has not been identified than label it with N1
+                        StateLookup{2,3} = DeltaIdx(1);
+                        LogStr = ['Info: NSB_SleepScoring >> GMM found N1/SWS1 using rule 1a'];
+                    elseif sum(meanSpectra(DeltaIdx(2),2:3),2) > sum(meanSpectra(DeltaIdx(2),5:6),2)
+                        if ~ismember(DeltaIdx(2),[StateLookup{:,3}])
+                        StateLookup{2,3} = DeltaIdx(2);
+                        LogStr = ['Info: NSB_SleepScoring >> GMM found N1/SWS1 using rule 1b'];
+                        end
+                    else
+                        LogStr = ['Warning: NSB_SleepScoring >> GMM Cannot find N1/SWS1'];
+                    end
                 else
-                LogStr = ['Warning: NSB_SleepScoring >> GMM Cannot find N1/SWS1'];
+                    LogStr = ['Warning: NSB_SleepScoring >> GMM Cannot find N1/SWS1'];
+                end
                 disp(LogStr);
                 NSBlog(options.LogFile,LogStr);
-                end
     
                 % Waking alpha activity 8-13 Hz (with Theta)
                 if isnan(StateLookup{4,3})
-                    [~,LowPwrIdx] = sortrows(sum(meanSpectra,2),[1],'MissingPlacement','last'); %sort in decending order by beta power
                     if BetaIdx(1) == LowPwrIdx(1)
-                        StateLookup{4,3} = BetaIdx(1);
-                else
-                LogStr = ['Warning: NSB_SleepScoring >> GMM Cannot find AW/W'];
-                disp(LogStr);
-                NSBlog(options.LogFile,LogStr);
+                        %If Beta/Theta/Delta ratio is the lowest total spectral power
+                        if ~ismember(BetaIdx(1),[StateLookup{:,3}])
+                            StateLookup{4,3} = BetaIdx(1);
+                        else
+                            LogStr = ['Warning: NSB_SleepScoring >> GMM Cannot find AW/W'];
+                            disp(LogStr);
+                            NSBlog(options.LogFile,LogStr);
+                        end
+                    else
+                        LogStr = ['Warning: NSB_SleepScoring >> GMM Cannot find AW/W'];
+                        disp(LogStr);
+                        NSBlog(options.LogFile,LogStr);
                     end
                 end
 
 
-               % Quiet Waking
-               try
+                % Quiet Waking
                 if isnan(StateLookup{3,3})
-                    [~,LowPwrIdx] = sortrows(sum(meanSpectra,2),[1],'MissingPlacement','last'); %sort in decending order by beta power
                     if DeltaIdx(end-1) == LowPwrIdx(2)
-                        StateLookup{3,3} = LowPwrIdx(2);
-                else
-                LogStr = ['Warning: NSB_SleepScoring >> GMM Cannot find QW/N1'];
-                disp(LogStr);
-                NSBlog(options.LogFile,LogStr);
+                        if ~ismember(LowPwrIdx(1),[StateLookup{:,3}])
+                            StateLookup{3,3} = LowPwrIdx(2);
+                        else
+                            LogStr = ['Warning: NSB_SleepScoring >> GMM Cannot find QW/N1'];
+                            disp(LogStr);
+                            NSBlog(options.LogFile,LogStr);
+                        end
+                    else
+                        LogStr = ['Warning: NSB_SleepScoring >> GMM Cannot find QW/N1'];
+                        disp(LogStr);
+                        NSBlog(options.LogFile,LogStr);
                     end
                 end
-               catch mee
-                disp(mee);
-               end
+       
+% now try 2ndary identifications
+                [~, DeltaIdx] = sortrows(meanSpectra,[-3 -2],'MissingPlacement','last'); %sort in decending order by delta power
+                [~, ThetaIdx] = sortrows(meanSpectra,[-5 -4],'MissingPlacement','last'); %sort in decending order by theta power
+                %[~, BetaIdx] = sortrows(meanSpectra,[-6 -7],'MissingPlacement','last'); %sort in decending order by beta power
+                [~, BetaIdx] = sortrows(sum(meanSpectra(:,7:8),2) ./ sum(meanSpectra(:,4:5),2) ./ sum(meanSpectra(:,2:3),2),[-1],'MissingPlacement','last'); %sort in decending order by beta power
+                [~,LowPwrIdx] = sortrows(sum(meanSpectra(:,2:end),2),[1],'MissingPlacement','last'); %sort in decending order by total power (1+ Hz)
+
+                % Rem - Sawtooth waves 2-6 Hz,LAMF w/o spindles or K-complexes
+                if all(meanSpectra(ThetaIdx(1),4) > meanSpectra(ThetaIdx(1),[2:3,5:end]))
+                    %  Highest theta 4.5-6.5 AND higher than other points >1Hz.
+                    if isnan(StateLookup{5,3}) && ~ismember(ThetaIdx(1),[StateLookup{:,3}])
+                    StateLookup{5,3} = ThetaIdx(1);
+                    end
+                    LogStr = ['Warning: NSB_SleepScoring >> GMM found PS/R using rule 1c'];
+                    disp(LogStr);
+                    NSBlog(options.LogFile,LogStr);
+                elseif all(meanSpectra(ThetaIdx(1),5) > meanSpectra(ThetaIdx(1),[2:4,6:end]))
+                    % Highest theta 6.5-8.5 AND higher than other points >1Hz.
+                    if isnan(StateLookup{5,3}) && ~ismember(ThetaIdx(1),[StateLookup{:,3}])
+                    StateLookup{5,3} = ThetaIdx(1);
+                    end
+                    LogStr = ['Warning: NSB_SleepScoring >> GMM found PS/R using 2ndary rule'];
+                    disp(LogStr);
+                    NSBlog(options.LogFile,LogStr);
+                elseif all(meanSpectra(ThetaIdx(1),4) > meanSpectra(ThetaIdx(1),[3,6:end])) || ...
+                        all(meanSpectra(ThetaIdx(1),5) > meanSpectra(ThetaIdx(1),[3,6:end]))
+                    if isnan(StateLookup{5,3}) && ~ismember(ThetaIdx(1),[StateLookup{:,3}])
+                    StateLookup{5,3} = ThetaIdx(1);
+                    end
+                    LogStr = ['Warning: NSB_SleepScoring >> GMM found PS/R using 3rd rule'];
+                    disp(LogStr);
+                    NSBlog(options.LogFile,LogStr);
+                end
+
+                % Waking alpha activity 8-13 Hz (with Theta)
+                if isnan(StateLookup{4,3})
+                    %If Beta/Theta/Delta ratio is the lowest total spectral power
+                    if ~ismember(LowPwrIdx(1),[StateLookup{:,3}])
+                        StateLookup{4,3} = LowPwrIdx(1);
+                        LogStr = ['Warning: NSB_SleepScoring >> GMM found PS/R using min power rule'];
+                        disp(LogStr);
+                        NSBlog(options.LogFile,LogStr);
+                    end
+                end
+
 
             %Now work out the other states. 
             % Rem Sawtooth waves 2-6 Hz,LAMF w/o spindles or K-complexes
@@ -891,18 +963,6 @@ switch upper(ScoringType)
             %     Delta 2+3 / Beta 6+7 (Ratio)
             %     sum(meanSpectra(:,2:3),2) ./ sum(meanSpectra(:,4:5),2)
             % Waking alpha activity 8-13 Hz
-
-
-
-
-
-
-
-
-
-
-
-
 
         % 
         % % AASM 2026 v3
@@ -1029,6 +1089,9 @@ switch upper(ScoringType)
         
         % plot if requested
         if options.Scoring.plot
+            n=1;
+            pColors = {'#0072BD','#D95319',	'#EDB120','#7E2F8E','#77AC30','#4DBEEE'};
+            try
             fh = figure('Units','inches','ToolBar','none');
             fh.Position = [fh.Position(1), -0.1, 8, 10.5];
             t = tiledlayout('flow','TileSpacing','Compact');
@@ -1081,38 +1144,73 @@ switch upper(ScoringType)
             end
             set(CurAxis(n),'XTickLabel',rebinFreq);
 
+            n = n+1;
+            CurAxis(n) = nexttile(4,[2 2]);
+            [~,PCAscore] = pca(rebinPSD(validBins,:),'NumComponents',minnumComponents);
+            PCA1 = gscatter(PCAscore(:,1),PCAscore(:,2),idx(validBins,:));
+            % h_PCA = gca;
+            % hold on
+            % gmPDF = @(x,y) arrayfun(@(x0,y0) pdf(obj{minnumComponents},[x0 y0]),x,y);
+            % fcontour(gmPDF,[h_PCA.XLim h_PCA.YLim],'MeshDensity',100);
+            title(sprintf('GM Model - %i Cluster(s)',minnumComponents));
+            xlabel('1st principal component');
+            ylabel('2nd principal component');
+            PCA_Legend = legend(Labels);
+            %PCA_Legend.Position = [0.7 0.25 0.1 0.1];
+
+            % CurAxis(n+1) = nexttile(3,[2 2]);
+            % PCA2 = gscatter(PCAscore(:,2),PCAscore(:,3),idx(validBins,:));
+            % h_PCA = gca;
+            % hold on
+            % gmPDF = @(x,y) arrayfun(@(x0,y0) pdf(gm,[x0 y0]),x,y);
+            % fcontour(gmPDF,[h_PCA.XLim h_PCA.YLim],'MeshDensity',100)
+            % title(sprintf('GM Model - %i Component(s)',minnumComponents));
+            % xlabel('1st principal component');
+            % ylabel('2nd principal component');
+            % PCA_Ledgend = legend(PCA2);
+            % %PCA_Ledgend.Position = [0.7 0.25 0.1 0.1];
+
+            nAxis = length(CurAxis);
             for n = 1:size(StateLookup,1)
-                CurAxis(n+1) = nexttile;
+                CurAxis(n+nAxis) = nexttile;
                 plotdata = decimate(ph_sig.YData, ceil(length(ph_sig.YData) / length(idx)),'fir');
                 plotts = decimate(ph_sig.XData, ceil(length(ph_sig.YData) / length(idx)),'fir');
                 plot(plotts,plotdata,'Color',[0.8,0.8,0.8]); hold on;
                 plotdata(idx ~= n) = NaN;
-                plot(plotts,plotdata,'color','b');
+                plot(plotts,plotdata,'color',pColors{n});
                 try
-                title(CurAxis(n+1),StateLookup{cell2mat(StateLookup(:,3)) == n,1});
+                    title(CurAxis(n+nAxis),StateLookup{cell2mat(StateLookup(:,3)) == n,1});
                 catch
-                  title(CurAxis(n+1),'UNK');
+                    title(CurAxis(n+nAxis),'UNK');
                 end
-                set(CurAxis(n+1),'XTick',ax(1).XTick)
-                set(CurAxis(n+1),'XTickLabel',ax(1).XTickLabel);
-                if options.MatlabPost2014
-                    set(CurAxis(n+1),'XLabel',ax(1).XLabel);
-                    set(CurAxis(n+1),'YLabel',ax(1).YLabel);
-                else
-                    set(CurAxis(n+1),'XLabel',ph_sig.XLabel);
-                    set(CurAxis(n+1),'YLabel',ph_sig.YLabel);
-                end
+                set(CurAxis(n+nAxis),'XTick',ax(1).XTick)
+                set(CurAxis(n+nAxis),'XTickLabel',ax(1).XTickLabel);
+
             end
-            linkaxes(CurAxis(2:end),'xy');
+            if options.MatlabPost2014
+                xlabel(CurAxis(n+nAxis),ax(1).XLabel.String);
+                ylabel(CurAxis(n+nAxis),ax(1).YLabel.String);
+            else
+                set(CurAxis(n+nAxis),'XLabel',ph_sig.XLabel);
+                set(CurAxis(n+nAxis),'YLabel',ph_sig.YLabel);
+            end
+            linkaxes(CurAxis(3:end),'xy');
 
             disp(['NSB_SleepScoring - Saving GMMlogSpectrum Cluster Profiles Plot...']);
             if ~isempty(options.LogFile)
                 print(fh,'-dpdf', fullfile(fileparts(options.LogFile),['GMMlogSpectrumClusterProfileFig_',num2str(now),'.pdf']) );
-%                hgsave(fh, fullfile(fileparts(options.LogFile),['GMMlogSpectrumClusterProfileFig_',num2str(now),'.fig']), '-v7.3');
+                hgsave(fh, fullfile(fileparts(options.LogFile),['GMMlogSpectrumClusterProfileFig_',num2str(now),'.fig']), '-v7.3');
             else
                 print(fh,'-dpdf', fullfile(cd,['GMMlogSpectrumClusterProfileFig_',num2str(now),'.pdf']) );
             end
             close(fh);
+            catch ME
+                errorstr = ['ERROR: NSB_SleepScoring >> ',ME.message];
+                if ~isempty(ME.stack)
+                    errorstr = [errorstr,' Function: ',ME.stack(1).name,' Line # ',num2str(ME.stack(1).line)];
+                end
+                NSBlog(options.LogFile,errorstr);
+            end
         end
         
         %assign scoring to clusters
@@ -1135,7 +1233,7 @@ switch upper(ScoringType)
         %[ScoreIndex,ScoreIndexTS] = combineFFTEpoch(ScoreIndex,options); %<<< Need to combine time and rebin << here is where we need to return new .ts  << F and T are idnetial to ScoreIndex here
         [ScoreIndex,ScoreIndexTS] = combineFFTEpoch(ScoreIndex,validBins,options); %<<< Need to combine time and rebin << here is where we need to return new .ts  << F and T are idnetial to ScoreIndex here
         if options.rules.ForceArtifactsAsWaking
-                LogStr = ['Info: NSB_SleepScoring >> Forceing artifacts as waking'];
+                LogStr = ['Info: NSB_SleepScoring >> Forcing artifacts as waking'];
                 disp(LogStr);
                 NSBlog(options.LogFile,LogStr);
         end
@@ -1246,4 +1344,5 @@ if options.Scoring.plot
     close(h_fig);
 end
 
+rng(RndGen);
 status = true;

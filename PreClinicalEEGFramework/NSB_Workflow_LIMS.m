@@ -779,7 +779,7 @@ for curChannel = 1:length(DataStruct.Channel)
             NSBlog(LIMS.logfile,errorstr);
         end
         errordlg({['Failed Processing Channel #',num2str(curChannel),' file: ',[LIMS.StudyDesign{curFile,1}.path, ' ', LIMS.StudyDesign{curFile,1}.name]],...
-            errorstr},'NSB_SpectralAnalysis');
+            errorstr},'NSB_Workflow_LIMS');
     end
 
     % %%%%%%%%%%%%%%%%%%%   Run single channel AIC

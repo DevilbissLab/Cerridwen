@@ -79,7 +79,7 @@ try
     end
 catch ME
     msg = ME.message;
-    fclose(fid);
+    try, fclose(fid); end
     return;
 end
 fclose(fid);
