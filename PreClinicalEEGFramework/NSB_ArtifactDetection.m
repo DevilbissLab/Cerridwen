@@ -271,6 +271,11 @@ switch upper(options.algorithm)
             %
             % see: "Muscle Artifacts in the sleep EEG: Automated detection and effect on
             % all-night EEG power spectra." J. Sleep Res. (1996) 5. 155-164
+            errorstr = ['Info: NSB_ArtifactDetection >> Performing muscle artifacts detection'];
+            disp('... Muscle Artifact Detection');
+            if ~isempty(options.logfile)
+                NSBlog(options.logfile,errorstr);
+            end
             %
             %First Clean Large artifacts because you are going to use a median
             FiltData = Signal;
@@ -298,7 +303,11 @@ switch upper(options.algorithm)
 
             %% find spectral artifacts
             if strcmpi(options.algorithm,'FULL +SPECTRAL')
-                disp('... Spectral Artifact Detection');
+                errorstr = ['Info: NSB_ArtifactDetection >> Performing spectral artifact detection'];
+                disp('... Muscle Artifact Detection');
+                if ~isempty(options.logfile)
+                    NSBlog(options.logfile,errorstr);
+                end
                 SpectralWindow = LIMS.PreClinicalFramework.SpectralAnalysis.FinalFreqResolution*LIMS.PreClinicalFramework.ArtifactDetection.SampleRate;
                     [F,T,P,validBins] = SSM_Spectrogram(Signal, SpectralWindow, [],... 
                         LIMS.PreClinicalFramework.ArtifactDetection.SampleRate,...
@@ -309,7 +318,7 @@ switch upper(options.algorithm)
 
                     SpectralArtifactIndex = false(size(Signal));
                     SpectralIDX = SpectralNorm > mean(SpectralNorm)+std(SpectralNorm)*options.full.STDMultiplier;
-                    SpectralIDX = SpectralIDX | validBins; %address valid bins returned from Spectrogram and excessive spectral noise
+                    SpectralIDX = SpectralIDX | ~validBins; %address valid bins returned from Spectrogram and excessive spectral noise
                     SpectralArtifactIndex(SpectralIDX) = true;
                     SpectralArtifactIndex = conv(single(SpectralArtifactIndex),ones(1,SpectralWindow-1)) > 0; %<< check math single could be used here to cheat rounding errors see 'eps'
                     SpectralArtifactIndex = SpectralArtifactIndex(1:end-(SpectralWindow-2));

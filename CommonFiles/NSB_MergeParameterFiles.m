@@ -1,6 +1,8 @@
 function status = NSB_MergeParameterFiles(IgnoreField)
 % function status = mergeNSBParameterFiles(DConlyFlag)
 % 
+% DConlyFlag        - (string) {"algorithm","full.DCcalculation","all"}
+%
 % The purpose of this funcion is to batch process multiple NexStep Biomarkers 
 % Parameter Files .xml files with a Master template to make sure ALL of the
 % parameters are identical (to the Master) with the sole exception of the
@@ -47,6 +49,15 @@ for curFile = 1:FileList_len
             SaveXMLStruct.ArtifactDetection.algorithm = MasterXMLStruct.ArtifactDetection.algorithm;
         case "full.DCcalculation"
             SaveXMLStruct.ArtifactDetection.full.DCcalculation = MasterXMLStruct.ArtifactDetection.full.DCcalculation;
+        case "all"
+            SaveXMLStruct.ArtifactDetection.algorithm = MasterXMLStruct.ArtifactDetection.algorithm;
+            SaveXMLStruct.ArtifactDetection.full.DCcalculation = MasterXMLStruct.ArtifactDetection.full.DCcalculation;
+            
+            %temp fix - one could recursively check through all to make sure structure is updated.
+            SaveXMLStruct.ArtifactDetection.full.SpectralNormCutoff = MasterXMLStruct.ArtifactDetection.full.SpectralNormCutoff;
+            SaveXMLStruct.ArtifactDetection.full.MinSignal = MasterXMLStruct.ArtifactDetection.full.MinSignal;
+
+
         otherwise
             disp(['IgnoreField is not changed']);
     end

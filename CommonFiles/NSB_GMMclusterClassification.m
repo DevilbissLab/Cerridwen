@@ -55,7 +55,13 @@ try
     %N3 0.5-2Hz that are > 20% of the 30 sec epoch
     if sum(meanSpectra(DeltaIdx(1),2:3),2) > sum(meanSpectra(DeltaIdx(1),5:6),2) && all(meanSpectra(DeltaIdx(1),2) > meanSpectra(DeltaIdx(1),3:end))
         %if Delta power > Beta power AND 1-3 Hz has the most power
-        StateLookup{1,3} = DeltaIdx(1);
+        if ~ismember(DeltaIdx(1),[StateLookup{:,3}])
+            StateLookup{1,3} = DeltaIdx(1);
+        else
+            LogStr = ['Warning: NSB_GMMclusterClassification >> GMM Cannot find N3/SWS2'];
+            disp(LogStr);
+            NSBlog(options.LogFile,LogStr);
+        end
     else
         LogStr = ['Warning: NSB_GMMclusterClassification >> GMM Cannot find N3/SWS2'];
         disp(LogStr);
@@ -65,12 +71,20 @@ try
     % Rem Sawtooth waves 2-6 Hz,LAMF w/o spindles or K-complexes
     if all(meanSpectra(ThetaIdx(1),4) > meanSpectra(ThetaIdx(1),[1:3,5:end]))
         % if the spectral peak is truely theta - Highest theta 4.5-6.5 AND higher than all other points.
-        StateLookup{5,3} = ThetaIdx(1);
-        LogStr = ['Info: NSB_GMMclusterClassification >> GMM found PS/R using rule 1a'];
+        if ~ismember(ThetaIdx(1),[StateLookup{:,3}])
+            StateLookup{5,3} = ThetaIdx(1);
+            LogStr = ['Info: NSB_GMMclusterClassification >> GMM found PS/R using rule 1a'];
+        else
+            LogStr = ['Warning: NSB_GMMclusterClassification >> GMM Cannot find PS/R'];
+        end
     elseif all(meanSpectra(ThetaIdx(1),5) > meanSpectra(ThetaIdx(1),[1:3,5:end]))
         % if the spectral peak is truely theta - Highest theta 4.5-6.5 AND higher than all other points.
-        StateLookup{5,3} = ThetaIdx(1);
-        LogStr = ['Warning: NSB_GMMclusterClassification >> GMM found PS/R using rule 1b'];
+        if ~ismember(ThetaIdx(1),[StateLookup{:,3}])
+            StateLookup{5,3} = ThetaIdx(1);
+            LogStr = ['Warning: NSB_GMMclusterClassification >> GMM found PS/R using rule 1b'];
+        else
+            LogStr = ['Warning: NSB_GMMclusterClassification >> GMM Cannot find PS/R'];
+        end
     else
         LogStr = ['Warning: NSB_GMMclusterClassification >> GMM Cannot find PS/R'];
     end
@@ -121,7 +135,7 @@ try
     % Quiet Waking
     if isnan(StateLookup{3,3})
         if DeltaIdx(end-1) == LowPwrIdx(2)
-            if ~ismember(LowPwrIdx(1),[StateLookup{:,3}])
+            if ~ismember(LowPwrIdx(2),[StateLookup{:,3}])
                 StateLookup{3,3} = LowPwrIdx(2);
             else
                 LogStr = ['Warning: NSB_GMMclusterClassification >> GMM Cannot find QW/N1'];

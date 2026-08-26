@@ -156,7 +156,7 @@ if ~isempty(LIMS.StudyDesign)
                         NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ...Reference Channel will be taken from Study Design if it exists']);
 
                         LIMS.PreClinicalFramework.ArtifactDetection.full.DCcalculation = 'DC';
-                        NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ..."FULL / FULL-EMG" Artifact detection using User set DC value']);
+                        NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ..."ArtifactDetection.full.DCcalculation" parameter set to "DC" to explicitly use User threshold value']);
 
                         NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ...All remaining parameters will not be altered']);
                         LIMS.usingUniqueParmsFiles = true;
