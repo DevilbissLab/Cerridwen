@@ -74,7 +74,7 @@ function parms = NSB_ParameterFile()
 % April 15 2025 ver 3.2x adding JIDT toolbox for connectivity analysis
 % April 19 2025 ver 3.21 Bug fixes, Major bug fix with artifact detection.
 % June 24 2025 ver 3.30 Bug fixes, rewrite of "GenStatTable" to include AIS/TE measures
-%
+% Aug 26 2026 ver 3.4 Artifact detection includes spectral artifact, GMM sleep scoring updated, bug fixes, additional parameters
 %
 % NSB Data Format
 %
@@ -120,7 +120,7 @@ parms.DataSpider.HIPAA.ShredPartial = true;
 
 %% PreclinicalFramework Parameters 
 parms.PreClinicalFramework.Name = 'Cerridwen EEG Framework';
-parms.PreClinicalFramework.Version = 'v.3.30';
+parms.PreClinicalFramework.Version = 'v.3.40';
 parms.PreClinicalFramework.MatlabVersion = version;
 parms.PreClinicalFramework.HomeDir = cd; %Where is this exe (or working dir) located
 if isdeployed
