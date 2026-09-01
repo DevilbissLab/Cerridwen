@@ -304,7 +304,7 @@ switch upper(options.algorithm)
             %% find spectral artifacts
             if strcmpi(options.algorithm,'FULL +SPECTRAL')
                 errorstr = ['Info: NSB_ArtifactDetection >> Performing spectral artifact detection'];
-                disp('... Muscle Artifact Detection');
+                disp('... Spectral Artifact Detection');
                 if ~isempty(options.logfile)
                     NSBlog(options.logfile,errorstr);
                 end
