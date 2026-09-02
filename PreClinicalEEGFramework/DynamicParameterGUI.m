@@ -544,9 +544,10 @@ else
      handles.PlotWin.Stop = handles.PlotWin.Start + WinValue;
 end
 %set Slider
-stepMin = handles.PlotWin.Stop/handles.PlotWin.Max; if stepMin > 1, stepMin = 1; end; 
-stepMax = handles.PlotWin.Stop/handles.PlotWin.Max*10; if stepMax > 1, stepMax = stepMin; end; 
-set(handles.timeWinSet_slide,'SliderStep',[stepMin stepMax]); %dynamic steps
+set(handles.timeWinSet_slide,'Value',handles.PlotWin.Start);
+ltlTimeStep = (handles.PlotWin.Stop-handles.PlotWin.Start)/handles.PlotWin.Max;     if ltlTimeStep > 1, ltlTimeStep = 1; end 
+bigTimeStep = (handles.PlotWin.Stop-handles.PlotWin.Start)/handles.PlotWin.Max*10;  if bigTimeStep > 1, bigTimeStep = ltlTimeStep; end 
+set(handles.timeWinSet_slide,'SliderStep',[ltlTimeStep bigTimeStep]); %dynamic steps
 
 %set Time Plot
 set(handles.TimePlot,'XLim',[handles.PlotWin.Start handles.PlotWin.Stop]);
@@ -598,6 +599,9 @@ set(HeatMapAxis,'XTickLabel',handles.PlotWin.Start:(handles.PlotWin.Stop-handles
 
 %update bands handles.HeatBandHandle
 xValues = get(handles.Heatmap.HeatMapPlot,'XData');
+if isscalar(xValues)
+    xValues = [xValues,xValues];
+end
 for curBand = 1:length(handles.HeatBandHandle)
         set(handles.HeatBandHandle(curBand,1),'XData', xValues);
         set(handles.HeatBandHandle(curBand,2),'XData', xValues);
@@ -1172,7 +1176,7 @@ h1 = figure(...
 'MenuBar','none',...
 'Name','Parameter Interface GUI',...
 'PaperPosition',get(0,'defaultfigurePaperPosition'),...
-'Position',[727 154 807 820],...
+'Position',[727 154 807 820],... % 'Units','characters','Position',[0 5 162 63],...
 'Resize','on',...
 'Tag','MainFigure',...
 'Visible','on');
