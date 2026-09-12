@@ -137,7 +137,7 @@ switch upper(options.algorithm)
 
         errorstr = ['Info: NSB_ArtifactDetection:RMS Detection - RMSMultiplier = ',num2str(options.RMSMultiplier), '(',num2str(rms*options.RMSMultiplier),' mV)'];
         if ~isempty(options.logfile)
-           NSBlog(options.logfile,errorstr);
+           NSBlog(options.logfile,errorstr); disp(errorstr);
         end
 
     case 'DC'
@@ -147,7 +147,7 @@ switch upper(options.algorithm)
 
         errorstr = ['Info: NSB_ArtifactDetection:DC Detection - DCvalue = ',num2str(options.DCvalue), '(mV)'];
         if ~isempty(options.logfile)
-           NSBlog(options.logfile,errorstr);
+           NSBlog(options.logfile,errorstr); disp(errorstr);
         end
 
     case {'FULL','FULL -EMG', 'FULL +SPECTRAL'}
@@ -176,7 +176,7 @@ switch upper(options.algorithm)
                         DCThresh = min(BuffMax)*2;
                         errorstr = ['Warning: NSB_ArtifactDetection >> DCThresh < min(BuffMax)*2. Using ',num2str(DCThresh),' as threshold calculated as min(BuffMax)*2.'];
                         if ~isempty(options.logfile)
-                            NSBlog(options.logfile,errorstr);
+                            NSBlog(options.logfile,errorstr); disp(errorstr);
                         else
                             errordlg(errorstr,'NSB_ArtifactDetection');
                         end
@@ -186,7 +186,7 @@ switch upper(options.algorithm)
 
                     errorstr = ['Info: NSB_ArtifactDetection:Full(Scaled) - STDMultiplier = ',num2str(options.full.STDMultiplier), '(',DCThresh,' mV)'];
                     if ~isempty(options.logfile)
-                        NSBlog(options.logfile,errorstr);
+                        NSBlog(options.logfile,errorstr); disp(errorstr);
                     end
                     
                 otherwise %use DC thresh
@@ -196,7 +196,7 @@ switch upper(options.algorithm)
 
                     errorstr = ['Info: NSB_ArtifactDetection:Full(DCvalue) - DCvalue = ',num2str(options.full.DCvalue), '(mV)'];
                     if ~isempty(options.logfile)
-                        NSBlog(options.logfile,errorstr);
+                        NSBlog(options.logfile,errorstr); disp(errorstr);
                     end
             end
                       

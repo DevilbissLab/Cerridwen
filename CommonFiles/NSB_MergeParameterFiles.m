@@ -1,7 +1,8 @@
 function status = NSB_MergeParameterFiles(IgnoreField)
 % function status = mergeNSBParameterFiles(DConlyFlag)
 % 
-% DConlyFlag        - (string) {"algorithm","full.DCcalculation","all"}
+% IgnoreField        - (string) {"algorithm","full.DCcalculation","all"}
+%                       These are the fields that are ignored during the merge - i.e. dictated by the MasterXML
 %
 % The purpose of this funcion is to batch process multiple NexStep Biomarkers 
 % Parameter Files .xml files with a Master template to make sure ALL of the

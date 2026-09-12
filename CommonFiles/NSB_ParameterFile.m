@@ -75,6 +75,7 @@ function parms = NSB_ParameterFile()
 % April 19 2025 ver 3.21 Bug fixes, Major bug fix with artifact detection.
 % June 24 2025 ver 3.30 Bug fixes, rewrite of "GenStatTable" to include AIS/TE measures
 % Aug 26 2026 ver 3.4 Artifact detection includes spectral artifact, GMM sleep scoring updated, bug fixes, additional parameters
+% Sep 12 2026 ver 3.41 Bug Fix for "by channel" artifact detection 
 %
 % NSB Data Format
 %
@@ -120,7 +121,7 @@ parms.DataSpider.HIPAA.ShredPartial = true;
 
 %% PreclinicalFramework Parameters 
 parms.PreClinicalFramework.Name = 'Cerridwen EEG Framework';
-parms.PreClinicalFramework.Version = 'v.3.40';
+parms.PreClinicalFramework.Version = 'v.3.41';
 parms.PreClinicalFramework.MatlabVersion = version;
 parms.PreClinicalFramework.HomeDir = cd; %Where is this exe (or working dir) located
 if isdeployed
@@ -139,9 +140,17 @@ parms.PreClinicalFramework.BioBookoutput = true;
 
 curMatVersion = regexp(version,'\s','split'); curMatVersion = cellfun(@str2num,regexp(curMatVersion{1},'\.','split') );
 if any(curMatVersion >= [8,4,0,150421])
+    %addressing XML writer issues
     parms.PreClinicalFramework.MatlabPost2014 = true;
+    if any(curMatVersion >= [23,2,0,2380103])
+        %addressing new display issues
+        parms.PreClinicalFramework.MatlabPost2023 = true;
+    else
+        parms.PreClinicalFramework.MatlabPost2023 = false;
+    end
 else
     parms.PreClinicalFramework.MatlabPost2014 = false;
+    parms.PreClinicalFramework.MatlabPost2023 = false;
 end
 
 %Filetype specific parameters

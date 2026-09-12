@@ -58,6 +58,11 @@ if nargin > 1
     else
         SpectralAnalysisParms.logfile = '';
     end
+    if isfield(inputParms.PreClinicalFramework,'MatlabPost2023')
+        MatlabPost2023_flag = inputParms.PreClinicalFramework.MatlabPost2023;
+    else
+        MatlabPost2023_flag = false;
+    end
 end
 clear inputParms;
 
@@ -65,7 +70,7 @@ clear inputParms;
 FileLength = length(ChannelStruct.Data)/ChannelStruct.Hz;
 [DataPath,DataFilename,DataFileext] = fileparts(Filename);
 DataNameStr = ['Channel: ',ChannelStruct.Name, ' File: ',DataFilename,DataFileext,' File Length: ',num2str(FileLength),' (sec)'];
-[DynParamGUIFig, handles] = GenerateGUI(DataNameStr);
+[DynParamGUIFig, handles] = GenerateGUI(DataNameStr,MatlabPost2023_flag);
 movegui(DynParamGUIFig,'center'); 
 
 %% Now that GUI is setup
@@ -1166,7 +1171,7 @@ switch upper(ArtifactDetectionParms.algorithm)
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [h1, handles] = GenerateGUI(DataStr)
+function [h1, handles] = GenerateGUI(DataStr,MatlabPost2023_flag)
 %
 BandRatioCell = {  'Band 1'; 'Band 2'; 'Band 3'; 'Band 4'; 'Band 5' };
 
@@ -1180,6 +1185,10 @@ h1 = figure(...
 'Resize','on',...
 'Tag','MainFigure',...
 'Visible','on');
+if MatlabPost2023_flag
+    h1.Units = 'points';
+    h1.Position = [544.5,114.75,605.25,615];
+end
 
 h1a = uicontrol(...
 'Parent',h1,...
@@ -1295,12 +1304,20 @@ h6 = uipanel(...
 'Tag','Spectral_pan',...
 'Clipping','on',...
 'Position',[2 3 158.2 36]);
+if MatlabPost2023_flag
+    h7.Units = 'points';
+    h7.Position = [9,31.5,665,378];
+end
 
 h7 = axes(...
 'Parent',h6,...
 'Units','pixels',...
 'Position',[60 220 400 210],...%[50 220 400 220]
 'Tag','SpectralPlot');
+if MatlabPost2023_flag
+    h7.Units = 'points';
+    h7.Position = [44.25,164.25,370,157.5];
+end
 
 h8 = get(h7,'xlabel');
 set(h8, 'Parent',h7,...
@@ -1433,6 +1450,10 @@ h16 = uipanel(...
 'Tag','sBands_pan',...
 'Clipping','on',...
 'Position',[472 50 305 400]);
+if MatlabPost2023_flag
+    h16.Units = 'points';
+    h16.Position = [425,36.75,228.75,300];
+end
 
 h17 = uipanel(...
 'Parent',h16,...

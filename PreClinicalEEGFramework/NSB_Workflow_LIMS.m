@@ -81,7 +81,7 @@ if ~isempty(LIMS.StudyDesign)
         end
     end
     
-    %% Iterate through each file/row if the Study design
+%% Iterate through each file/row if the Study design
     % Parse file specific data from each row
     % parallize here -> undocumented -> feature('numcores')
     for curFile = 1:size(LIMS.StudyDesign,1)
@@ -95,6 +95,7 @@ if ~isempty(LIMS.StudyDesign)
     LIMS.subjectID = '';
     LIMS.RecordingDate = [];
     LIMS.HypnogramChannel = [];
+    LIMS.usingUniqueParmsFiles = false;
 
         % determine whether there is a Per File - Parameter File
         % This is currently dirty.
@@ -102,14 +103,14 @@ if ~isempty(LIMS.StudyDesign)
         % if just channel:  handles.StudyDesign{1, 1}.AnalysisChan = struct =  {'EEG1-01-00',NaN;NaN,[]}
         % if channel + Parameter file:  handles.StudyDesign{1, 1}.AnalysisChan = struct =  {'EEG1-01-00','A:/none/no.txt';NaN,[]}
         % if no data: handles.StudyDesign{1, 1}.AnalysisChan = false
-        
+
         if islogical(LIMS.StudyDesign{curFile,1}.AnalysisChan)
             % No analysis channel/parameters data
-            
+
             % If a unique param file was loaded and there is not one now... load the default
             if LIMS.usingUniqueParmsFiles
                 if isstruct(LIMS.StudyDesign{curFile}.AnalysisChan)
-                NSBlog(LIMS.logfile,['Warning: NSB_Workflow_LIMS >> Parameter .xml not specified (using initial parameters from GUI): ',LIMS.StudyDesign{curFile}.AnalysisChan(1).ParamsFile]);
+                   NSBlog(LIMS.logfile,['Warning: NSB_Workflow_LIMS >> Parameter .xml not specified (using initial parameters from GUI): ',LIMS.StudyDesign{curFile}.AnalysisChan(1).ParamsFile]);
                 else
                    NSBlog(LIMS.logfile,['Warning: NSB_Workflow_LIMS >> Parameter .xml not specified (using initial parameters from GUI): ']);
                 end
@@ -134,60 +135,6 @@ if ~isempty(LIMS.StudyDesign)
                 LIMS.chans = LIMS.StudyDesign{1, 1}.AnalysisChan;
                 msg = ['Warning: NSB_Workflow_LIMS >> Channels not specified in row ',num2str(curFile +1),'. Using channels from first row.'];
                 NSBlog(LIMS.logfile,msg);
-            end
-
-            % Second process parameter filenames
-            if ~isempty(LIMS.StudyDesign{curFile}.AnalysisChan(1).ParamsFile)
-                LIMS.usingUniqueParmsFiles = false;
-                
-                if ischar(LIMS.StudyDesign{curFile}.AnalysisChan(1).ParamsFile)
-                    %this is a NaN or String (if contains data)
-                    if exist(LIMS.StudyDesign{curFile}.AnalysisChan(1).ParamsFile,'file') == 2
-                        DynParamGUIStruct = [];
-                        if handles.parameters.PreClinicalFramework.MatlabPost2014
-                            DynParamGUIStruct = tinyxml2_wrap('load', LIMS.StudyDesign{curFile}.AnalysisChan(1).ParamsFile);
-                        else
-                            DynParamGUIStruct = xml_load(LIMS.StudyDesign{curFile}.AnalysisChan(1).ParamsFile);
-                        end
-
-                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                        % Update ONLY the artifact detection.
-                        NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ...Updating/using artifact detection parameters from: ', LIMS.StudyDesign{curFile}.AnalysisChan(1).ParamsFile]);
-                        NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ...Reference Channel will be taken from Study Design if it exists']);
-
-                        LIMS.PreClinicalFramework.ArtifactDetection.full.DCcalculation = 'DC';
-                        NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ..."ArtifactDetection.full.DCcalculation" parameter set to "DC" to explicitly use User threshold value']);
-
-                        NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ...All remaining parameters will not be altered']);
-                        LIMS.usingUniqueParmsFiles = true;
-
-                        [status, LIMS.PreClinicalFramework.ArtifactDetection, msg] = NSB_ParameterHandler('mergeExtAnalysisParms', LIMS.PreClinicalFramework.ArtifactDetection, DynParamGUIStruct.ArtifactDetection);
-                        if status
-                            NSBlog(LIMS.logfile, msg);
-                        else
-                            NSBlog(LIMS.logfile, 'Warning: NSB_Workflow_LIMS >> NSB_ParameterHandler Failed');
-                            NSBlog(LIMS.logfile, msg);
-                        end
-
-                    else
-                        NSBlog(LIMS.logfile,['Warning: NSB_Workflow_LIMS >> Parameter .xml not found (using initial parameters from GUI): ',LIMS.StudyDesign{curFile}.AnalysisChan(1).ParamsFile]);
-                        %If a unique param file was loaded and there is not one... load the default
-                        LIMS.PreClinicalFramework = handles.parameters.PreClinicalFramework;
-                        LIMS.usingUniqueParmsFiles = false;
-                    end
-                else
-                    NSBlog(LIMS.logfile,['Warning: NSB_Workflow_LIMS >> Parameter File value not a char array (using initial parameters from GUI): ',LIMS.StudyDesign{curFile}.AnalysisChan(1).ParamsFile]);
-                    %If a unique param file was loaded and there is not one... load the default
-                    LIMS.PreClinicalFramework = handles.parameters.PreClinicalFramework;
-                    LIMS.usingUniqueParmsFiles = false;
-                end
-            else
-                if LIMS.usingUniqueParmsFiles
-                    NSBlog(LIMS.logfile,['Warning: NSB_Workflow_LIMS >> Parameter .xml not specified (using initial parameters from GUI): ',LIMS.StudyDesign{curFile}.AnalysisChan(1).ParamsFile]);
-                    %If a unique param file was loaded and there is not one now... load the default
-                    LIMS.PreClinicalFramework = handles.parameters.PreClinicalFramework;
-                end
-                LIMS.usingUniqueParmsFiles = false;
             end
         else
             msg = ['Warning: NSB_Workflow_LIMS >> StudyDesign is neither a logical or struct. Skipping analysis row'];
@@ -487,7 +434,77 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for curChannel = 1:length(DataStruct.Channel)
     status = updateProgress(LIMS);
+        % determine whether there is a Per File - Parameter File
+        % This is currently dirty.
+        % The excell could have no entries, just the channel or both
+        % if just channel:  handles.StudyDesign{1, 1}.AnalysisChan = struct =  {'EEG1-01-00',NaN;NaN,[]}
+        % if channel + Parameter file:  handles.StudyDesign{1, 1}.AnalysisChan = struct =  {'EEG1-01-00','A:/none/no.txt';NaN,[]}
+        % if no data: handles.StudyDesign{1, 1}.AnalysisChan = false
+        
+        if isstruct(LIMS.StudyDesign{curFile,1}.AnalysisChan)
+            %analysis channel/parameters data is in spreadsheet
+            %this is a struct let it be because we will process each channel seperately later
+            %contains .Name and .ParamsFile
+            %
+            % Now process parameter filenames for each channel
+            if ~isempty(LIMS.StudyDesign{curFile}.AnalysisChan(curChannel).ParamsFile)
+                LIMS.usingUniqueParmsFiles = false;
+                
+                if ischar(LIMS.StudyDesign{curFile}.AnalysisChan(curChannel).ParamsFile)
+                    %this is a NaN or String (if contains data)
+                    if exist(LIMS.StudyDesign{curFile}.AnalysisChan(curChannel).ParamsFile,'file') == 2
+                        DynParamGUIStruct = [];
+                        if handles.parameters.PreClinicalFramework.MatlabPost2014
+                            DynParamGUIStruct = tinyxml2_wrap('load', LIMS.StudyDesign{curFile}.AnalysisChan(curChannel).ParamsFile);
+                        else
+                            DynParamGUIStruct = xml_load(LIMS.StudyDesign{curFile}.AnalysisChan(curChannel).ParamsFile);
+                        end
 
+                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                        % Update ONLY the artifact detection.
+                        NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ...Updating/using artifact detection parameters from: ', LIMS.StudyDesign{curFile}.AnalysisChan(curChannel).ParamsFile]);
+                        NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ...Reference Channel will be taken from Study Design if it exists']);
+
+                        LIMS.PreClinicalFramework.ArtifactDetection.full.DCcalculation = 'DC';
+                        NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ..."ArtifactDetection.full.DCcalculation" parameter set to "DC" to explicitly use User threshold value']);
+
+                        NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ...All remaining parameters will not be altered']);
+                        LIMS.usingUniqueParmsFiles = true;
+
+                        [status, LIMS.PreClinicalFramework.ArtifactDetection, msg] = NSB_ParameterHandler('mergeExtAnalysisParms', LIMS.PreClinicalFramework.ArtifactDetection, DynParamGUIStruct.ArtifactDetection);
+                        if status
+                            NSBlog(LIMS.logfile, msg);
+                        else
+                            NSBlog(LIMS.logfile, 'Warning: NSB_Workflow_LIMS >> NSB_ParameterHandler Failed');
+                            NSBlog(LIMS.logfile, msg);
+                        end
+
+                    else
+                        NSBlog(LIMS.logfile,['Warning: NSB_Workflow_LIMS >> Parameter .xml not found (using initial parameters from GUI): ',LIMS.StudyDesign{curFile}.AnalysisChan(curChannel).ParamsFile]);
+                        %If a unique param file was loaded and there is not one... load the default
+                        LIMS.PreClinicalFramework = handles.parameters.PreClinicalFramework;
+                        LIMS.usingUniqueParmsFiles = false;
+                    end
+                else
+                    NSBlog(LIMS.logfile,['Warning: NSB_Workflow_LIMS >> Parameter File value not a char array (using initial parameters from GUI): ',LIMS.StudyDesign{curFile}.AnalysisChan(curChannel).ParamsFile]);
+                    %If a unique param file was loaded and there is not one... load the default
+                    LIMS.PreClinicalFramework = handles.parameters.PreClinicalFramework;
+                    LIMS.usingUniqueParmsFiles = false;
+                end
+            else
+                if LIMS.usingUniqueParmsFiles
+                    NSBlog(LIMS.logfile,['Warning: NSB_Workflow_LIMS >> Parameter .xml not specified (using initial parameters from GUI): ',LIMS.StudyDesign{curFile}.AnalysisChan(curChannel).ParamsFile]);
+                    %If a unique param file was loaded and there is not one now... load the default
+                    LIMS.PreClinicalFramework = handles.parameters.PreClinicalFramework;
+                end
+                LIMS.usingUniqueParmsFiles = false;
+            end
+        else
+            msg = ['Warning: NSB_Workflow_LIMS >> StudyDesign is neither a logical or struct. Skipping analysis row'];
+            NSBlog(LIMS.logfile,msg);
+            continue;
+        end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     try
         % check/ignore channel 1st for Sample rate less than 60Hz = nyquist 30Hz
         if DataStruct.Channel(curChannel).Hz > 60
