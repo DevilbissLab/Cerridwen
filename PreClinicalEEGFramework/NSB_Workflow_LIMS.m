@@ -440,6 +440,7 @@ for curChannel = 1:length(DataStruct.Channel)
         % if just channel:  handles.StudyDesign{1, 1}.AnalysisChan = struct =  {'EEG1-01-00',NaN;NaN,[]}
         % if channel + Parameter file:  handles.StudyDesign{1, 1}.AnalysisChan = struct =  {'EEG1-01-00','A:/none/no.txt';NaN,[]}
         % if no data: handles.StudyDesign{1, 1}.AnalysisChan = false
+        %
         
         if isstruct(LIMS.StudyDesign{curFile,1}.AnalysisChan)
             %analysis channel/parameters data is in spreadsheet
@@ -465,15 +466,14 @@ for curChannel = 1:length(DataStruct.Channel)
                         NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ...Updating/using artifact detection parameters from: ', LIMS.StudyDesign{curFile}.AnalysisChan(curChannel).ParamsFile]);
                         NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ...Reference Channel will be taken from Study Design if it exists']);
 
-                        LIMS.PreClinicalFramework.ArtifactDetection.full.DCcalculation = 'DC';
-                        NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ..."ArtifactDetection.full.DCcalculation" parameter set to "DC" to explicitly use User threshold value']);
-
-                        NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ...All remaining parameters will not be altered']);
-                        LIMS.usingUniqueParmsFiles = true;
-
                         [status, LIMS.PreClinicalFramework.ArtifactDetection, msg] = NSB_ParameterHandler('mergeExtAnalysisParms', LIMS.PreClinicalFramework.ArtifactDetection, DynParamGUIStruct.ArtifactDetection);
                         if status
                             NSBlog(LIMS.logfile, msg);
+                            % Because we are using user set thresholds force those values as DC not scaled.
+                            LIMS.PreClinicalFramework.ArtifactDetection.full.DCcalculation = 'DC';
+                            NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ..."ArtifactDetection.full.DCcalculation" parameter set to "DC" to explicitly use User threshold value']);
+                            NSBlog(LIMS.logfile,['NSB_Workflow_LIMS: ...All remaining parameters will not be altered']);
+                            LIMS.usingUniqueParmsFiles = true;
                         else
                             NSBlog(LIMS.logfile, 'Warning: NSB_Workflow_LIMS >> NSB_ParameterHandler Failed');
                             NSBlog(LIMS.logfile, msg);
