@@ -294,7 +294,7 @@ try
 catch
     infostr = {'Warning: NSB_GenerateStatTable >> Cannot write NSB_Cerridwen-SleepStatisticalAnalysisTable.';'Check that the file is not currently open and then press OK'};
     uiwait(msgbox(infostr,'NSB_GenerateStatTable','warn','modal'));
-    [status,msg] = NSB_WriteGenericCSV(SheetHeader, fullfile(outputPath, 'NSB_Cerridwen-SleepStatisticalAnalysisTable.csv'),false);
+    [status,msg] = NSB_WriteGenericCSV(SleepStatsHeader, fullfile(outputPath, 'NSB_Cerridwen-SleepStatisticalAnalysisTable.csv'),false);
 end
 % Seizure calculated summaries
 SeizureStatsHeader = ['Date,Subject,Channel Name,Channel Num,Manipulation,Total Number of Spike Trains,Total Spike Train Duration (min),Percent of Recording,Mean Spike Train Duration (sec),Longest Spike Train Duration (sec),Shortest Spike Train Duration (sec),Mean Number of Spikes/Train'];
@@ -304,7 +304,7 @@ try
 catch
     infostr = {'Warning: NSB_GenerateStatTable >> Cannot write NSB_Cerridwen-SeizureStatisticalAnalysisTable.';'Check that the file is not currently open and then press OK'};
     uiwait(msgbox(infostr,'NSB_GenerateStatTable','warn','modal'));
-    [status,msg] = NSB_WriteGenericCSV(SheetHeader, fullfile(outputPath, 'NSB_Cerridwen-SeizureStatisticalAnalysisTable.csv'),false);
+    [status,msg] = NSB_WriteGenericCSV(SeizureStatsHeader, fullfile(outputPath, 'NSB_Cerridwen-SeizureStatisticalAnalysisTable.csv'),false);
 end
 % Active Info Storage (AIS) data tables
 AISFileHeader = ['Date,Subject,Channel Name,Channel Num,Manipulation,Epoch Num,Valid Epoch,Sleep Scoring,MeanAIS,optimal_k_history,NullMean,NullStd,Nullp'];
@@ -314,7 +314,7 @@ try
 catch
     infostr = {'Warning: NSB_GenerateStatTable >> Cannot write NSB_Cerridwen-AISStatisticalAnalysisTable.';'Check that the file is not currently open and then press OK'};
     uiwait(msgbox(infostr,'NSB_GenerateStatTable','warn','modal'));
-    [status,msg] = NSB_WriteGenericCSV(SheetHeader, fullfile(outputPath, 'NSB_Cerridwen-AISStatisticalAnalysisTable.csv'),false);
+    [status,msg] = NSB_WriteGenericCSV(AISFileHeader, fullfile(outputPath, 'NSB_Cerridwen-AISStatisticalAnalysisTable.csv'),false);
 end
 % Transfer Entropy (TE) data tables
 TEFileHeader = ['Date,Subject,Channel Name,Channel Num,Manipulation,Epoch Num,Valid Epoch,Sleep Scoring,MeanTE,optimal_k_history,NullMean,NullStd,Nullp'];
@@ -324,7 +324,7 @@ try
 catch
     infostr = {'Warning: NSB_GenerateStatTable >> Cannot write NSB_Cerridwen-TEStatisticalAnalysisTable.';'Check that the file is not currently open and then press OK'};
     uiwait(msgbox(infostr,'NSB_GenerateStatTable','warn','modal'));
-    [status,msg] = NSB_WriteGenericCSV(SheetHeader, fullfile(outputPath, 'NSB_Cerridwen-TEStatisticalAnalysisTable.csv'),false);
+    [status,msg] = NSB_WriteGenericCSV(TEFileHeader, fullfile(outputPath, 'NSB_Cerridwen-TEStatisticalAnalysisTable.csv'),false);
 end
 
 

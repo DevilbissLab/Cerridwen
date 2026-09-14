@@ -1,9 +1,10 @@
-function [DataStruct,status] = LIMS_DetrendData(handles, DataStruct)
+function [DataStruct,status] = LIMS_DetrendData(LIMS, DataStruct)
+%helper function to detrend on a channel by channel bases
 
 status = false;
 try
     for curChan = 1:DataStruct.nChannels
-        DataStruct.Channel(curChan).Data = detrend(DataStruct.Channel(curChan).Data);
+        DataStruct.Channel(curChan).Data = detrend(DataStruct.Channel(curChan).Data, LIMS.PreClinicalFramework.Resample.DetrendType);
     end
     status = true;
 catch ME
@@ -11,8 +12,8 @@ catch ME
     if ~isempty(ME.stack)
         errorstr = [errorstr,' Function: ',ME.stack(1).name,' Line # ',num2str(ME.stack(1).line)];
     end
-    if ~isempty(handles.parameters.PreClinicalFramework.LogFile)
-        NSBlog(handles.parameters.PreClinicalFramework.LogFile,errorstr);
+    if ~isempty(LIMS.logfile)
+        NSBlog(LIMS.logfile,errorstr);
     else
         disp(errorstr);
     end

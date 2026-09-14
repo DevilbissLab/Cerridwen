@@ -4,8 +4,8 @@ function [status, DataStruct] = NSB_DataImportModule(fileinfo,options)
 % Inputs:
 %   fileinfo              - (Struct) StudyDesign cell(:,1)
 %                               .type - file type (.edf,.rec,.nex,.smr,(dsi file folder),.fif,.sag(Sage Prop text format),.acq)
-%                               .path - file path
-%                               .name - file name
+%                               .path - file path (ends in filesep)
+%                               .name - file name (includes extension)
 %   options               - (Struct) 'dir','xls','xml'
 %                               .progress - (logical) show progress bar
 %                               .logfile - logfile path+name
@@ -96,7 +96,11 @@ switch lower(fileinfo.type)
                     end
                 end
             end
-            
+        
+        case {'.bdf'}
+            % https://www.biosemi.com/faq/file_format.htm
+            % https://www.mathworks.com/matlabcentral/fileexchange/35761-bdf_chanops
+
         case {'.nex'}
             FileName = fullfile(fileinfo.path,fileinfo.name);
             %Warning Does not produce .nSamples

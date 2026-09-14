@@ -1,5 +1,6 @@
 function parms = NSB_ParameterFile()
 % NSB_ParameterFile() - Parameter file for all NSB software
+%   Loads once during Cerridwen initialization.
 %
 % Inputs: none
 %
@@ -73,7 +74,8 @@ function parms = NSB_ParameterFile()
 % April 15 2025 ver 3.2x adding JIDT toolbox for connectivity analysis
 % April 19 2025 ver 3.21 Bug fixes, Major bug fix with artifact detection.
 % June 24 2025 ver 3.30 Bug fixes, rewrite of "GenStatTable" to include AIS/TE measures
-%
+% Aug 26 2026 ver 3.4 Artifact detection includes spectral artifact, GMM sleep scoring updated, bug fixes, additional parameters
+% Sep 12 2026 ver 3.41 Bug Fix for "by channel" artifact detection 
 %
 % NSB Data Format
 %
@@ -119,7 +121,7 @@ parms.DataSpider.HIPAA.ShredPartial = true;
 
 %% PreclinicalFramework Parameters 
 parms.PreClinicalFramework.Name = 'Cerridwen EEG Framework';
-parms.PreClinicalFramework.Version = 'v.3.30';
+parms.PreClinicalFramework.Version = 'v.3.41';
 parms.PreClinicalFramework.MatlabVersion = version;
 parms.PreClinicalFramework.HomeDir = cd; %Where is this exe (or working dir) located
 if isdeployed
@@ -138,9 +140,17 @@ parms.PreClinicalFramework.BioBookoutput = true;
 
 curMatVersion = regexp(version,'\s','split'); curMatVersion = cellfun(@str2num,regexp(curMatVersion{1},'\.','split') );
 if any(curMatVersion >= [8,4,0,150421])
+    %addressing XML writer issues
     parms.PreClinicalFramework.MatlabPost2014 = true;
+    if any(curMatVersion >= [23,2,0,2380103])
+        %addressing new display issues
+        parms.PreClinicalFramework.MatlabPost2023 = true;
+    else
+        parms.PreClinicalFramework.MatlabPost2023 = false;
+    end
 else
     parms.PreClinicalFramework.MatlabPost2014 = false;
+    parms.PreClinicalFramework.MatlabPost2023 = false;
 end
 
 %Filetype specific parameters
@@ -159,18 +169,24 @@ parms.PreClinicalFramework.Reference.ReRefChan = '';
 parms.PreClinicalFramework.Resample.doResample = true;
 parms.PreClinicalFramework.Resample.newSampleRate = 250; %Hz
 parms.PreClinicalFramework.Resample.InterpSamples = 50; 
-parms.PreClinicalFramework.Resample.Detrend = true;
+parms.PreClinicalFramework.Resample.Detrend = true;         %not in XML
+parms.PreClinicalFramework.Resample.DetrendType = 0;   %removes nth-degree polynomial trend. n = 0 (mean); n = 1 (linear); n = 2 (quadratic)   %not in XML
 
 %StatsTable specific parameters
 parms.PreClinicalFramework.StatsTable.doMeanBaseline = false;
 parms.PreClinicalFramework.StatsTable.BaselineMeanTimeStart = [];
 parms.PreClinicalFramework.StatsTable.BaselineMeanTimeEnd = [];
 
+% LineNoise Filtering default parameters
+parms.PreClinicalFramework.LineNoiseDetection.doDetection = true;
+parms.PreClinicalFramework.LineNoiseDetection.Freq = 60; %60 Hz AC line noise
+parms.PreClinicalFramework.LineNoiseDetection.Bandwidth = 2; %Filter width (Should be even)
+
 % Artifact Detection default parameters
 parms.PreClinicalFramework.ArtifactDetection.doDetection = true;
 parms.PreClinicalFramework.ArtifactDetection.SampleRate = 100;
 parms.PreClinicalFramework.ArtifactDetection.IndexedOutput = true;
-parms.PreClinicalFramework.ArtifactDetection.algorithm = 'FULL';
+parms.PreClinicalFramework.ArtifactDetection.algorithm = 'FULL'; % 'DC', 'RMS', 'Full', 'Full -EMG', 'Full +Spectral'
 parms.PreClinicalFramework.ArtifactDetection.logfile = '';
 parms.PreClinicalFramework.ArtifactDetection.DCvalue = 100; %mV DC hard limit
 parms.PreClinicalFramework.ArtifactDetection.RMSMultiplier = 5; %Detect > X times RMS;(Default 5)
@@ -271,13 +287,15 @@ else
     parms.PreClinicalFramework.Scoring.SomnogramReport_Template = 'X:\NSB_AnalyticFramework\ObjectCode\InstallerFiles\Templates\HypnogramReport_Template.doc';
 end
 % SleepScore Logical Rules
-parms.PreClinicalFramework.rules.ApplyArchitectureRules = false; %<< Something funky here
-parms.PreClinicalFramework.rules.SWS2.PercentOfStageEpoch = 45; %>= percent of FFTEpocs to be scored in a Stage Epoch to be called SWS2
-parms.PreClinicalFramework.rules.SWS1.PercentOfStageEpoch = 30; 
-parms.PreClinicalFramework.rules.QW.PercentOfStageEpoch = 60; 
-parms.PreClinicalFramework.rules.AW.PercentOfStageEpoch = 80; 
-parms.PreClinicalFramework.rules.PS.PercentOfStageEpoch = 80; 
-parms.PreClinicalFramework.rules.UNK.PercentOfStageEpoch = 80;
+parms.PreClinicalFramework.rules.ForceArtifactsAsWaking = true; %<< Something funky here
+parms.PreClinicalFramework.rules.ApplyArchitectureRules = false;
+% Values represent >= percent of FFTEpocs to be scored in a Stage Epoch to be called SWS2
+parms.PreClinicalFramework.rules.SWS2.PercentOfStageEpoch = 20; %N3 for human default = 45 (AASM v3 = 20)  
+parms.PreClinicalFramework.rules.SWS1.PercentOfStageEpoch = NaN;%N2 for human default = 30 (AASM v3) = NaN
+parms.PreClinicalFramework.rules.QW.PercentOfStageEpoch =   NaN;%N1 for human default = 60 (AASM v3) = NaN 
+parms.PreClinicalFramework.rules.AW.PercentOfStageEpoch =   NaN;% W for human default = 80 (AASM v3) = NaN 
+parms.PreClinicalFramework.rules.PS.PercentOfStageEpoch =   NaN;% R for human default = 80 (AASM v3) = NaN 
+parms.PreClinicalFramework.rules.UNK.PercentOfStageEpoch =  NaN;%             default = 80 (AASM v3) = NaN 
 parms.PreClinicalFramework.rules.minStateLength = 10; %(seconds) this is rounded to the nearest parms.PreClinicalFramework.Scoring.StageEpoch
 
 % GMM starting point 

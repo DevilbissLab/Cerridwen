@@ -113,7 +113,11 @@ SheetHeader = regexp(SheetHeader,'[\w\s\.]*','match');
 %Generate Tables
 EpochNumber = 1:length(RecordingStruct.Channel(chan).Data); EpochNumber = EpochNumber(:); %RowVec
 BinTime = (EpochNumber-1)*options.parameters.PreClinicalFramework.Scoring.StageEpoch;
-CalendarTime = datevec(RecordingStruct.StartDate);
+if ~isempty(RecordingStruct.StartDate)
+    CalendarTime = datevec(RecordingStruct.StartDate);
+else
+    CalendarTime = datevec(0); % this is a rare occurance when using .nex files
+end
 % if strcmpi(RecordingStruct.FileFormat,'.dsi')
 %     CalendarTime(:,4) = CalendarTime(:,4) + options.parameters.PreClinicalFramework.File.DSIoffset;
 % end

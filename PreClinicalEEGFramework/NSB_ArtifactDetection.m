@@ -74,7 +74,7 @@ switch nargin
         options.full.DCvalue = 100; %mV DC hard limit
         options.full.STDMultiplier = 3; %Detect > X times Standard deviations.
         options.full.minFlatSigLength = 0.1; %Seconds.
-        options.full.MinSignal = 5; %5 mV
+        options.full.MinSignal = 5; %minimum absolute signal value for options.full.minFlatSigLength 
         options.full.dvValMultiplier = .8; %Original 0.45%Jump DC limit as a function of: dvValMultiplier*DClimitValue or std(signal) << this wants to be a fraction of DC Threshold
         options.full.MaxDT = 4; %Maximum duration (change in time (samples)) that it takes signal to artifact
         options.full.MinArtifactDuration = 0.25; % in seconds >>>  code will expand all artifacts to have at least this length
@@ -137,7 +137,7 @@ switch upper(options.algorithm)
 
         errorstr = ['Info: NSB_ArtifactDetection:RMS Detection - RMSMultiplier = ',num2str(options.RMSMultiplier), '(',num2str(rms*options.RMSMultiplier),' mV)'];
         if ~isempty(options.logfile)
-           NSBlog(options.logfile,errorstr);
+           NSBlog(options.logfile,errorstr); disp(errorstr);
         end
 
     case 'DC'
@@ -147,7 +147,7 @@ switch upper(options.algorithm)
 
         errorstr = ['Info: NSB_ArtifactDetection:DC Detection - DCvalue = ',num2str(options.DCvalue), '(mV)'];
         if ~isempty(options.logfile)
-           NSBlog(options.logfile,errorstr);
+           NSBlog(options.logfile,errorstr); disp(errorstr);
         end
 
     case {'FULL','FULL -EMG', 'FULL +SPECTRAL'}
@@ -176,7 +176,7 @@ switch upper(options.algorithm)
                         DCThresh = min(BuffMax)*2;
                         errorstr = ['Warning: NSB_ArtifactDetection >> DCThresh < min(BuffMax)*2. Using ',num2str(DCThresh),' as threshold calculated as min(BuffMax)*2.'];
                         if ~isempty(options.logfile)
-                            NSBlog(options.logfile,errorstr);
+                            NSBlog(options.logfile,errorstr); disp(errorstr);
                         else
                             errordlg(errorstr,'NSB_ArtifactDetection');
                         end
@@ -186,7 +186,7 @@ switch upper(options.algorithm)
 
                     errorstr = ['Info: NSB_ArtifactDetection:Full(Scaled) - STDMultiplier = ',num2str(options.full.STDMultiplier), '(',DCThresh,' mV)'];
                     if ~isempty(options.logfile)
-                        NSBlog(options.logfile,errorstr);
+                        NSBlog(options.logfile,errorstr); disp(errorstr);
                     end
                     
                 otherwise %use DC thresh
@@ -196,7 +196,7 @@ switch upper(options.algorithm)
 
                     errorstr = ['Info: NSB_ArtifactDetection:Full(DCvalue) - DCvalue = ',num2str(options.full.DCvalue), '(mV)'];
                     if ~isempty(options.logfile)
-                        NSBlog(options.logfile,errorstr);
+                        NSBlog(options.logfile,errorstr); disp(errorstr);
                     end
             end
                       
@@ -220,6 +220,22 @@ switch upper(options.algorithm)
             end
 
             % find segments of dropout that are not flat (i.e. ADC noise)
+            FlatSignalIDX2 = abs(diff(Signal))  <= options.full.MinSignal;
+            FlatSignalIDX2 = [FlatSignalIDX2; 1] | [1; FlatSignalIDX2];
+            %check for min length of flat segment
+            %Determine segment length using  DMD's ubiquitous char trick
+            FlatIDX = strfind(char(double(FlatSignalIDX2')),char(ones(1,minFlatSigLength))); %IDX of > DropoutDT
+            
+            if ~isempty(FlatIDX)
+                dropoutIndex = false(size(Signal));
+                dropoutIndex(FlatIDX) = true;
+                dropoutIndex = conv(single(dropoutIndex),ones(1,minFlatSigLength-1)) > 0; %<< check math single could be used here to cheat rounding errors see 'eps'
+                FlatSignalIDX2 = dropoutIndex(1:end-(minFlatSigLength-2));
+            else
+                FlatSignalIDX2 = false(size(FlatSignalIDX2,1),1);
+            end
+
+            % find segments of dropout that are not flat (i.e. ADC noise)
             MinSignalIDX = abs(Signal) <= options.full.MinSignal;
             FlatIDX = strfind(char(double(MinSignalIDX')),char(ones(1,minFlatSigLength))); %IDX of > DropoutDT
             if ~isempty(FlatIDX)
@@ -231,7 +247,7 @@ switch upper(options.algorithm)
                 MinSignalIDX = false(size(MinSignalIDX,1),1);
             end
 
-            FlatSignalIDX = FlatSignalIDX | MinSignalIDX;
+            FlatSignalIDX = FlatSignalIDX | FlatSignalIDX2 | MinSignalIDX;
             
             %% find artifacts that excede dv/dt limit
             % generate devalued DCthreshold used for electrical noise detection (crunchies)
@@ -255,6 +271,11 @@ switch upper(options.algorithm)
             %
             % see: "Muscle Artifacts in the sleep EEG: Automated detection and effect on
             % all-night EEG power spectra." J. Sleep Res. (1996) 5. 155-164
+            errorstr = ['Info: NSB_ArtifactDetection >> Performing muscle artifacts detection'];
+            disp('... Muscle Artifact Detection');
+            if ~isempty(options.logfile)
+                NSBlog(options.logfile,errorstr);
+            end
             %
             %First Clean Large artifacts because you are going to use a median
             FiltData = Signal;
@@ -282,7 +303,11 @@ switch upper(options.algorithm)
 
             %% find spectral artifacts
             if strcmpi(options.algorithm,'FULL +SPECTRAL')
+                errorstr = ['Info: NSB_ArtifactDetection >> Performing spectral artifact detection'];
                 disp('... Spectral Artifact Detection');
+                if ~isempty(options.logfile)
+                    NSBlog(options.logfile,errorstr);
+                end
                 SpectralWindow = LIMS.PreClinicalFramework.SpectralAnalysis.FinalFreqResolution*LIMS.PreClinicalFramework.ArtifactDetection.SampleRate;
                     [F,T,P,validBins] = SSM_Spectrogram(Signal, SpectralWindow, [],... 
                         LIMS.PreClinicalFramework.ArtifactDetection.SampleRate,...
@@ -293,7 +318,7 @@ switch upper(options.algorithm)
 
                     SpectralArtifactIndex = false(size(Signal));
                     SpectralIDX = SpectralNorm > mean(SpectralNorm)+std(SpectralNorm)*options.full.STDMultiplier;
-                    SpectralIDX = SpectralIDX | validBins; %address valid bins returned from Spectrogram and excessive spectral noise
+                    SpectralIDX = SpectralIDX | ~validBins; %address valid bins returned from Spectrogram and excessive spectral noise
                     SpectralArtifactIndex(SpectralIDX) = true;
                     SpectralArtifactIndex = conv(single(SpectralArtifactIndex),ones(1,SpectralWindow-1)) > 0; %<< check math single could be used here to cheat rounding errors see 'eps'
                     SpectralArtifactIndex = SpectralArtifactIndex(1:end-(SpectralWindow-2));
@@ -302,6 +327,19 @@ switch upper(options.algorithm)
             end
 
             
+            % if strcmpi(options.algorithm,'FULL +SPECTRAL')
+            %     %placeholder for later
+            %         [F,T,P,validBins] = SSM_Spectrogram(EEG.Data,...
+            %         options.Scoring.FFTEpoch*EEG.Hz,...
+            %         options.Scoring.WinOffset*EEG.Hz,...
+            %         EEG.Hz,...
+            %         options.Scoring.HzDiv);
+            % 
+            %         % remove secondary artifact in spectral domain
+            %         SpectralNorm = sum(P(:,find(F == 61):end),2,'omitnan');
+            %         P(SpectralNorm > mean(SpectralNorm)+std(SpectralNorm)*options.ArtifactDetection.full.STDMultiplier,:) = NaN;
+            % end
+
             %% Join Artifact indicies and create Struct
             Artifacts = ExtremeSignalIDX | FlatSignalIDX | dvArtifactIndex | EMGArtifactIndex | SpectralArtifactIndex;
             
@@ -427,10 +465,14 @@ if length(Signal) > 10000
     title(options.plotTitle,'FontWeight','bold','Interpreter', 'none');
     ylabel('Signal');
     set(get(h_fig,'CurrentAxes'),'XMinorTick','on')
+    try
     if sign(DCThresh) == -1
         set(get(h_fig,'CurrentAxes'),'YLim',[DCThresh*1.5,-DCThresh*1.5]);
     else
         set(get(h_fig,'CurrentAxes'),'YLim',[-DCThresh*1.5,DCThresh*1.5]);
+    end
+    catch mee
+        disp(mee);
     end
     
     %plot(Artifacts,':r');

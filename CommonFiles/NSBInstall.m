@@ -12,8 +12,14 @@ status = false;
 curMatVersion = regexp(version,'\s','split'); curMatVersion = cellfun(@str2num,regexp(curMatVersion{1},'\.','split') );
 if any(curMatVersion >= [8,4,0,150421])
     MatlabPost2014 = true;
+    if any(curMatVersion >= [23,2,0,2380103])
+        MatlabPost2023 = true;
+    else
+        MatlabPost2023 = false;
+    end
 else
     MatlabPost2014 = false;
+    MatlabPost2023 = false;
 end
 if nargin == 0
     fcn = 'add';
@@ -21,6 +27,7 @@ end
 
 disp(['The current version of Matlab is: ',version]);
 disp(['MatlabPost2014 flag = ',num2str(MatlabPost2014)]);
+disp(['MatlabPost2023 flag = ',num2str(MatlabPost2023)]);
 
 if strcmpi(fcn,'add')
     if ~exist('./Cerridwen.m') == 2
