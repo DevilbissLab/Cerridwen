@@ -189,6 +189,7 @@ switch nargin
 end
 %generate the base plot title
 options.Scoring.plotTitle = {options.Scoring.plotTitle; ['EEG-Ch',num2str(EEG.ChNumber), ' ',EEG.Name]};
+options.Scoring.saveplot = false;
 
 %check scoring type validity
 ScoringType = options.Scoring.ScoringType;
@@ -806,7 +807,6 @@ switch upper(ScoringType)
         [StateLookup,status] = NSB_GMMclusterClassification(meanSpectra,options);
 
             % plot if requested
-            options.Scoring.saveplot = true;
             if options.Scoring.plot
                 n=1;
                 pColors = {'#0072BD','#D95319',	'#EDB120','#7E2F8E','#77AC30','#4DBEEE'};

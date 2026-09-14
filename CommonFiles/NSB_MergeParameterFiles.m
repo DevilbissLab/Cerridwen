@@ -1,9 +1,9 @@
-function status = NSB_MergeParameterFiles(IgnoreField)
+function status = NSB_MergeParameterFiles(IgnoreField,bias)
 % function status = mergeNSBParameterFiles(DConlyFlag)
 % 
-% IgnoreField        - (string) {"algorithm","full.DCcalculation","all"}
+% IgnoreField        - (cell) {"algorithm","full.DCcalculation","full.MinArtifactDuration","full.CombineArtifactTimeThreshold","all"}
 %                       These are the fields that are ignored during the merge - i.e. dictated by the MasterXML
-%
+% bias               -  (double) adds a bias value to ArtifactDetection.full.DCcalculation
 % The purpose of this funcion is to batch process multiple NexStep Biomarkers 
 % Parameter Files .xml files with a Master template to make sure ALL of the
 % parameters are identical (to the Master) with the sole exception of the
@@ -13,6 +13,9 @@ status = false;
 
 if nargin < 1
     IgnoreField = false;
+    bias = 0;
+elseif nargin < 2 || isempty(bias)
+     bias = 0;
 end
 
 [MasterXML, MasterXMLpath] = uigetfile({'*.xml','NexStep Biomarkers Parameter Files (*.xml)';'*.*',  'All Files (*.*)'},'Choose a parameter file');
@@ -44,12 +47,17 @@ for curFile = 1:FileList_len
     SaveXMLStruct = MasterXMLStruct; %refresh Save Struct
     SaveXMLStruct.ArtifactDetection = MergeXMLStruct.ArtifactDetection;
     
-    switch lower(IgnoreField)
+    for CurField = 1:length(IgnoreField) %iterate
+    switch lower(IgnoreField{CurField})
         case "algorithm"
             % Force Master ArtifactDetection.algorithm
             SaveXMLStruct.ArtifactDetection.algorithm = MasterXMLStruct.ArtifactDetection.algorithm;
-        case "full.DCcalculation"
+        case "full.dccalculation"
             SaveXMLStruct.ArtifactDetection.full.DCcalculation = MasterXMLStruct.ArtifactDetection.full.DCcalculation;
+        case "full.minartifactduration"
+            SaveXMLStruct.ArtifactDetection.full.MinArtifactDuration = MasterXMLStruct.ArtifactDetection.full.MinArtifactDuration;
+        case "full.combineartifacttimethreshold"
+            SaveXMLStruct.ArtifactDetection.full.CombineArtifactTimeThreshold = MasterXMLStruct.ArtifactDetection.full.CombineArtifactTimeThreshold;
         case "all"
             SaveXMLStruct.ArtifactDetection.algorithm = MasterXMLStruct.ArtifactDetection.algorithm;
             SaveXMLStruct.ArtifactDetection.full.DCcalculation = MasterXMLStruct.ArtifactDetection.full.DCcalculation;
@@ -62,6 +70,11 @@ for curFile = 1:FileList_len
         otherwise
             disp(['IgnoreField is not changed']);
     end
+    end
+    if bias ~= 0
+        SaveXMLStruct.ArtifactDetection.full.DCcalculation = SaveXMLStruct.ArtifactDetection.full.DCcalculation + bias;
+    end
+
     tinyxml2_wrap('save', fullfile(SaveXMLDir, [fn, ext]), SaveXMLStruct);
     disp(['Successfully Saved: ',fullfile(SaveXMLDir,[fn, ext])]);
     else
